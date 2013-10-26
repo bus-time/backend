@@ -26,7 +26,7 @@ class Database(Base):
     version = Column(String, unique=True, nullable=False)
     contents = deferred(Column(Binary, nullable=False))
 
-    def __init__(self, schema_version, version, contents):
+    def __init__(self, schema_version=None, version=None, contents=None):
         self.schema_version = schema_version
         self.version = version
         self.contents = contents

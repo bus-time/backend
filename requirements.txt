@@ -5,6 +5,10 @@ MarkupSafe==0.18
 SQLAlchemy==0.8.2
 Werkzeug==0.9.4
 alembic==0.6.0
+github3.py==0.7.1
 itsdangerous==0.23
 psycopg2==2.5.1
+requests==2.0.1
+sh==1.09
 simplejson==3.3.1
+uritemplate.py==0.3.0

@@ -11,6 +11,7 @@ class Config(object):
     CONFIG_SECTION_NAME = 'general'
 
     VALUE_DB_URL = 'db-url'
+    VALUE_DB_REPO_DOWNLOAD_DIR = 'db-repo-download-dir'
 
     @classmethod
     def get_config_file_path(cls):
