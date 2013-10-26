@@ -7,7 +7,7 @@ import httplib
 from flask import jsonify, url_for, make_response
 from werkzeug.exceptions import abort
 
-from backend.app import app
+from backend.server import app
 from backend.db import Database
 
 

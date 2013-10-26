@@ -6,7 +6,7 @@ from __future__ import absolute_import, unicode_literals
 from argparse import ArgumentParser
 
 from backend import deploy
-from backend.app import app
+from backend.server import app
 
 
 ERROR_BOTH_RUN_SERVER_AND_DEPLOY_VERSION = (
