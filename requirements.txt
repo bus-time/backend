@@ -7,3 +7,4 @@ Werkzeug==0.9.4
 alembic==0.6.0
 itsdangerous==0.23
 psycopg2==2.5.1
+simplejson==3.3.1
