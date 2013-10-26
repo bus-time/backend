@@ -22,7 +22,7 @@ class Database(Base):
     __tablename__ = 'databases'
 
     id = Column(Integer, primary_key=True)
-    schema_version = Column(String, unique=True, nullable=False)
+    schema_version = Column(Integer, unique=True, nullable=False)
     version = Column(String, unique=True, nullable=False)
     contents = deferred(Column(Binary, nullable=False))
 
