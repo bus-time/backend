@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "Running database migrations"
+alembic -c ${OPENSHIFT_REPO_DIR}/wsgi/alembic.ini upgrade head
