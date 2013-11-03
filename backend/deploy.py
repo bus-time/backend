@@ -29,19 +29,10 @@ VERSION_TAG_NAME_PREFIX = 'db-schema-version-'
 def deploy_version():
     repo = connect_to_repo()
 
-    schema_version, schema_version_commit_sha = get_latest_schema_tag(repo)
-    describe_latest_schema_tag(schema_version, schema_version_commit_sha)
-    if not schema_version or not schema_version_commit_sha:
+    latest_schema_commit_info = get_latest_schema_commit_info(repo)
+    if not latest_schema_commit_info:
         return
-
-    master_head_sha = get_master_head_sha(repo)
-    describe_master_head_sha(master_head_sha)
-    if not master_head_sha:
-        return
-
-    if schema_version_commit_sha != master_head_sha:
-        describe_schema_version_not_master_head()
-        return
+    schema_version, schema_commit_sha = latest_schema_commit_info
 
     database = get_latest_deployed_database()
     describe_latest_deployed_database(database)
@@ -50,18 +41,15 @@ def deploy_version():
         describe_more_recent_schema_deployed(database, schema_version)
         return
 
-    if database and database.version == master_head_sha:
+    if database and database.version == schema_commit_sha:
         describe_version_already_deployed(database)
         return
 
-    if database and database.schema_version != schema_version:
-        database = None
-
-    save_database_data(database, schema_version, master_head_sha,
-                       build_database_contents(repo))
+    deploy_database(database, schema_version, schema_commit_sha,
+                    build_database_contents(repo))
 
 
-def describer(start=None, done=None):
+def describe(start=None, done=None):
     def decorator(func):
         def wrapper(*args, **kwargs):
             print(start or '', end=' ')
@@ -84,7 +72,7 @@ def connect_to_repo():
     return login_to_repo(username, password)
 
 
-@describer(start='Logging in to repo...', done='done.')
+@describe(start='Logging in to repo...', done='done.')
 def login_to_repo(username, password):
     return login(username, password).repository(REPO_OWNER, REPO_NAME)
 
@@ -93,8 +81,26 @@ def get_credentials():
     return raw_input('Username: '), getpass('Password: ')
 
 
-@describer(start='Obtaining latest tag with schema info...', done='done.')
-def get_latest_schema_tag(repo):
+def get_latest_schema_commit_info(repo):
+    schema_version, schema_version_commit_sha = get_latest_schema_tag_info(repo)
+    describe_latest_schema_tag_info(schema_version, schema_version_commit_sha)
+    if not schema_version or not schema_version_commit_sha:
+        return None
+
+    master_head_sha = get_master_head_sha(repo)
+    describe_master_head_sha(master_head_sha)
+    if not master_head_sha:
+        return None
+
+    if schema_version_commit_sha != master_head_sha:
+        describe_schema_version_tag_not_master_head()
+        return None
+
+    return schema_version, master_head_sha
+
+
+@describe(start='Obtaining latest tag with schema info...', done='done.')
+def get_latest_schema_tag_info(repo):
     tags = ((extract_schema_version(t), t.commit['sha'])
             for t in repo.iter_tags()
             if is_schema_version_tag(t))
@@ -122,7 +128,7 @@ def is_schema_version_tag(tag):
     return True
 
 
-def describe_latest_schema_tag(schema_version, schema_version_commit_sha):
+def describe_latest_schema_tag_info(schema_version, schema_version_commit_sha):
     if not schema_version or not schema_version_commit_sha:
         print('No schema version tags found. Nothing to do.')
     else:
@@ -131,7 +137,7 @@ def describe_latest_schema_tag(schema_version, schema_version_commit_sha):
         print(message.format(schema_version, schema_version_commit_sha))
 
 
-@describer(start='Obtaining master HEAD sha...', done='done.')
+@describe(start='Obtaining master HEAD sha...', done='done.')
 def get_master_head_sha(repo):
     head = repo.ref(MASTER_HEAD_REF)
     if head:
@@ -148,12 +154,12 @@ def describe_master_head_sha(master_head_sha):
         print("Master HEAD is '{}'.".format(master_head_sha))
 
 
-def describe_schema_version_not_master_head():
+def describe_schema_version_tag_not_master_head():
     print('Latest schema version tag does not reference master HEAD. ' +
           'Nothing to do.')
 
 
-@describer(start='Getting currently latest deployed database...', done='done.')
+@describe(start='Getting currently latest deployed database...', done='done.')
 def get_latest_deployed_database():
     return (Database.query
             .order_by(Database.schema_version.desc())
@@ -180,7 +186,7 @@ def describe_version_already_deployed(database):
     .format(database.version))
 
 
-@describer(start='Building database contents...', done='done.')
+@describe(start='Building database contents...', done='done.')
 def build_database_contents(repo):
     download_dir = get_dowload_dir()
 
@@ -232,13 +238,24 @@ def cleanup(download_dir):
     sh.rm('-rf', download_dir)
 
 
-@describer(start='Saving just built database file...', done='done.')
-def save_database_data(database, schema_version, version, contents):
-    if not database:
-        database = Database(schema_version=schema_version)
+@describe(start='Deploying just built database file...', done='done.')
+def deploy_database(prev_database, schema_version, master_head_sha, contents):
+    if prev_database and prev_database.schema_version == schema_version:
+        delete_database(prev_database)
 
-    database.version = version
-    database.contents = contents
+    create_database(schema_version, master_head_sha,
+                    contents)
+
+
+def delete_database(database):
+    db_session.delete(database)
+    db_session.flush()
+
+
+def create_database(schema_version, version, contents):
+    database = Database(schema_version=schema_version,
+                        version=version,
+                        contents=contents)
 
     db_session.add(database)
     db_session.commit()
