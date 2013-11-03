@@ -188,7 +188,7 @@ def describe_version_already_deployed(database):
 
 @describe(start='Building database contents...', done='done.')
 def build_database_contents(repo):
-    download_dir = get_dowload_dir()
+    download_dir = get_download_dir()
 
     try:
         download_master_dir(repo, download_dir)
@@ -200,7 +200,7 @@ def build_database_contents(repo):
         cleanup(download_dir)
 
 
-def get_dowload_dir():
+def get_download_dir():
     base_dir = Config.get_config_value(Config.VALUE_DB_REPO_DOWNLOAD_DIR)
     base_dir = os.path.realpath(base_dir)
     return tempfile.mkdtemp(dir=base_dir, prefix=DOWNLOAD_DIR_PREFIX)
