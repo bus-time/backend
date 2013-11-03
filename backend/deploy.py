@@ -218,15 +218,9 @@ def get_extracted_dir(download_dir):
 
 
 def make_database_file(download_dir):
-    initial_dir = os.getcwd()
     make_dir = get_make_dir(download_dir)
-
-    try:
-        os.chdir(make_dir)
-        sh.make(MAKE_TARGET)
-        return os.path.join(make_dir, DB_FILE_NAME)
-    finally:
-        os.chdir(initial_dir)
+    sh.make(MAKE_TARGET, '--directory', make_dir)
+    return os.path.join(make_dir, DB_FILE_NAME)
 
 
 def get_make_dir(download_dir):
