@@ -6,6 +6,7 @@ from getpass import getpass
 import os
 import tempfile
 from zipfile import ZipFile
+import sys
 
 from github3 import login
 import sh
