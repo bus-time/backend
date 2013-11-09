@@ -4,12 +4,11 @@
 from __future__ import absolute_import, unicode_literals, print_function
 from getpass import getpass
 import os
+import subprocess
 import tempfile
 from zipfile import ZipFile
-import sys
 
 from github3 import login
-import sh
 
 from backend.db import Database, db_session
 from backend.util import Config
@@ -226,7 +225,7 @@ def get_extracted_dir(download_dir):
 
 def make_database_file(download_dir):
     make_dir = get_make_dir(download_dir)
-    sh.make(MAKE_TARGET, '--directory', make_dir)
+    subprocess.check_call(['make', MAKE_TARGET, '--directory', make_dir])
     return os.path.join(make_dir, DB_FILE_NAME)
 
 
@@ -236,7 +235,7 @@ def get_make_dir(download_dir):
 
 
 def cleanup(download_dir):
-    sh.rm('-rf', download_dir)
+    subprocess.check_call(['rm', '-rf'])
 
 
 @describe(start='Deploying just built database file...', done='done.')
