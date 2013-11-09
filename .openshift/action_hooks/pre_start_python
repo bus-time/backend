@@ -1,3 +1,0 @@
-#!/bin/sh
-
-source $OPENSHIFT_REPO_DIR/.openshift/action_hooks/util/add_pg_libs_to_library_path.sh
