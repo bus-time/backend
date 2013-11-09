@@ -182,8 +182,8 @@ def describe_more_recent_schema_deployed(database, schema_version):
 
 
 def describe_version_already_deployed(database):
-    print("Database of version '{}' is already deployed. Nothing to do."
-    .format(database.version))
+    message = "Database of version '{}' is already deployed. Nothing to do."
+    print(message.format(database.version))
 
 
 @describe(start='Building database contents...', done='done.')
