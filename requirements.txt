@@ -6,6 +6,7 @@ SQLAlchemy==0.8.2
 Werkzeug==0.9.4
 alembic==0.6.0
 github3.py==0.7.1
+gunicorn==18.0
 itsdangerous==0.23
 psycopg2==2.5.1
 requests==2.0.1
