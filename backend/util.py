@@ -13,9 +13,8 @@ class Config(object):
     VALUE_DB_URL = 'db-url'
     VALUE_DB_REPO_DOWNLOAD_DIR = 'db-repo-download-dir'
 
-    ENV_OPENSHIFT_HOME_DIR = 'OPENSHIFT_HOMEDIR'
-    ENV_OPENSHIFT_DB_URL = 'OPENSHIFT_POSTGRESQL_DB_URL'
-    ENV_OPENSHIFT_DATA_DIR = 'OPENSHIFT_DATA_DIR'
+    ENV_HEROKU_DATABASE_URL = 'DATABASE_URL'
+    HEROKU_TMP_DIR = '/tmp'
 
     @classmethod
     def get_config_value(cls, value_name):
@@ -31,21 +30,20 @@ class Config(object):
 
     @classmethod
     def get_defaults(cls):
-        if cls.is_openshift_hosted():
-            return cls.get_openshift_defaults()
+        if cls.is_heroku_hosted():
+            return cls.get_heroku_defaults()
         else:
             return None
 
     @classmethod
-    def is_openshift_hosted(cls):
-        return os.environ.get(cls.ENV_OPENSHIFT_HOME_DIR) is not None
+    def is_heroku_hosted(cls):
+        return os.environ.get(cls.ENV_HEROKU_DATABASE_URL) is not None
 
     @classmethod
-    def get_openshift_defaults(cls):
+    def get_heroku_defaults(cls):
         return {
-            cls.VALUE_DB_URL: os.environ[cls.ENV_OPENSHIFT_DB_URL],
-            cls.VALUE_DB_REPO_DOWNLOAD_DIR: os.environ[
-                cls.ENV_OPENSHIFT_DATA_DIR]
+            cls.VALUE_DB_URL: os.environ[cls.ENV_HEROKU_DATABASE_URL],
+            cls.VALUE_DB_REPO_DOWNLOAD_DIR: cls.HEROKU_TMP_DIR
         }
 
     @classmethod
