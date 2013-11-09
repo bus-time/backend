@@ -235,7 +235,7 @@ def get_make_dir(download_dir):
 
 
 def cleanup(download_dir):
-    subprocess.check_call(['rm', '-rf'])
+    subprocess.check_call(['rm', '-rf', download_dir])
 
 
 @describe(start='Deploying just built database file...', done='done.')
