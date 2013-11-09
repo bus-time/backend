@@ -8,20 +8,20 @@ Provides simple Flask-based web server for Bus Time updates backend.
 You will need PostgreSQL 9.x, Sqlite 3.8.x, Python 2.7 and PIP installed.
 
 1. Create empty PostgreSQL database for the Backend.
-x. Create Backend configuration file based on `backend.ini.template`.
-x. Install required Python packages:
+2. Create Backend configuration file based on `backend.ini.template`.
+3. Install required Python packages:
 
         $ pip install -r requirements.txt
 
-2. Update database scheme:
+4. Update database scheme:
 
         $ alembic upgrade head
 
-3. Optionally deploy latest Bus Time database:
+5. Optionally deploy latest Bus Time database:
 
         $ python application --deploy-version
 
-4. Run web server:
+6. Run web server:
 
         $ python application --run-server
 
