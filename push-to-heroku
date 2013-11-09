@@ -1,0 +1,44 @@
+#!/bin/sh
+
+# Stop on unintialized variable usage
+set -u
+
+# Stop on first error
+set -e
+
+function print_help() {
+    echo "Usage: push-to-heroku [-f | --force]"
+    echo "Options:"
+    echo "    -f, --force"
+    echo "        Use 'git push --force' instead of just 'git push'."
+}
+
+function print_unknown_args() {
+    echo "Unknown arguments specified."
+    print_help
+}
+
+# Parse args
+push_force=""
+while [ $# -gt 0 ];
+do
+    case "$1" in
+        -f|--force) push_force="--force";;
+        -h|--help)  print_help;
+                    exit;;
+        *)          print_unknown_args;
+                    exit;;
+    esac
+    shift
+done
+
+# Stop web, push, migrate db, run web
+heroku maintenance:on
+if [ ! -z "$(heroku ps)" ]; # test if have any apps
+then
+    heroku ps:scale web=0
+fi
+git push heroku heroku-support:master $push_force
+heroku run alembic upgrade head
+heroku ps:scale web=1
+heroku maintenance:off
