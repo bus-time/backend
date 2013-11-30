@@ -51,8 +51,3 @@ Note: use appropriate color name instead of `<COLOR>` part.
 
         $ ./push-to-heroku
 The repository will be pushed and a web server will start.
-
-
-### Notes
-
-Script `push-to-heroku` currently pushes from `heroku-support` local branch to Heroku `master` branch. This should be changed when `heroku-support` moves to `master`.
