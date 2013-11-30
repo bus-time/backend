@@ -3,16 +3,16 @@
 
 
 from __future__ import absolute_import, unicode_literals, print_function
+from argparse import ArgumentParser
 from getpass import getpass
 import os
 import subprocess
 import tempfile
 from zipfile import ZipFile
+
 from Crypto.Hash import SHA512
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
-from argparse import ArgumentParser
-
 import github3
 import requests
 

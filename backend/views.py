@@ -2,10 +2,10 @@
 
 
 from __future__ import absolute_import, unicode_literals
+import glob
 import httplib
 import itertools
 import os
-import glob
 
 from Crypto.Hash import SHA512
 from Crypto.PublicKey import RSA
