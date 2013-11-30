@@ -5,7 +5,7 @@ Provides simple Flask-based web server for Bus Time updates backend.
 
 ## Running
 
-You will need PostgreSQL 9.x, Sqlite 3.8.x, Python 2.7 and PIP installed.
+You will need PostgreSQL 9.x, Python 2.7 and PIP installed.
 
 1. Create empty PostgreSQL database for the Backend.
 
@@ -55,3 +55,24 @@ Note: use appropriate color name instead of `<COLOR>` part.
 
         $ ./push-to-heroku
 The repository will be pushed and a web server will start.
+
+
+## Deploying Bus Time Database Version
+
+You will need SQLite 3.8.x, SSH keygen tool, Python 2.7 and PIP installed.
+
+1. Generate RSA key pair that will be used for deploy data signing:
+
+        $ ssh-keygen -t rsa
+The private key should NOT be protected with passphrase, because as for now PyCrypto does not
+support AES encoding algorithm used by `ssh-keygen` to encrypt private key with passphrase.
+
+2. Make sure that your public key has `.pub` suffix and is commited into
+`<REPO>/backend/deployment-keys/` directory and pushed to Heroku.
+
+3. Install required Python packages from `requirements.txt` just like in the section *Running*
+if you haven’t done it yet.
+
+3. Deploy latest version available in Bus Time Database repo:
+
+        $ python deploy-bus-time-db.py -f <your-private-rsa-key>
