@@ -16,6 +16,8 @@ class Config(object):
     ENV_HEROKU_DATABASE_URL = 'DATABASE_URL'
     HEROKU_TMP_DIR = '/tmp'
 
+    DEPLOYMENT_KEY_DIR = 'deployment-keys'
+
     @classmethod
     def get_config_value(cls, value_name):
         return cls.get_config_parser().get(cls.CONFIG_SECTION_NAME, value_name)
@@ -48,6 +50,13 @@ class Config(object):
 
     @classmethod
     def get_config_file_path(cls):
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-        dir = os.path.abspath(os.path.join(script_dir, '..'))
+        dir = os.path.abspath(os.path.join(cls.get_script_dir(), '..'))
         return os.path.join(dir, cls.CONFIG_FILE_NAME)
+
+    @classmethod
+    def get_script_dir(cls):
+        return os.path.dirname(os.path.realpath(__file__))
+
+    @classmethod
+    def get_deployment_key_dir(cls):
+        return os.path.join(cls.get_script_dir(), cls.DEPLOYMENT_KEY_DIR)

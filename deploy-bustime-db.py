@@ -8,6 +8,10 @@ import os
 import subprocess
 import tempfile
 from zipfile import ZipFile
+from Crypto.Hash import SHA512
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_PSS
+from argparse import ArgumentParser
 
 import github3
 import requests
@@ -29,9 +33,20 @@ FORM_STRING_DATA_ENCODING = 'utf8'
 FORM_CONTENTS_KEY = 'contents'
 FORM_VERSION_KEY = 'version'
 FORM_SCHEMA_VERSION_KEY = 'schema-version'
+FORM_SIGNATURE_SUFFIX = '-signature'
 
 
-def deploy_version():
+def main():
+    deploy_version(parse_args().signature_key_file)
+
+
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument('--signature-key-file', '-f', required=True)
+    return parser.parse_args()
+
+
+def deploy_version(key_file):
     repo = connect_to_repo()
 
     latest_schema_commit_info = get_latest_schema_commit_info(repo)
@@ -40,7 +55,8 @@ def deploy_version():
     schema_version, schema_commit_sha = latest_schema_commit_info
 
     deploy_database(schema_version, schema_commit_sha,
-                    build_database_contents(repo))
+                    build_database_contents(repo),
+                    key_file)
 
 
 def describe(start=None, done=None):
@@ -154,7 +170,18 @@ def describe_schema_version_tag_not_master_head():
 
 
 @describe(start='Deploying just built database file...', done='done.')
-def deploy_database(schema_version, master_head_sha, contents):
+def deploy_database(schema_version, master_head_sha, contents, key_file):
+    files = build_files_dict(schema_version, master_head_sha, contents,
+                             key_file)
+
+    response = requests.post(DEPLOY_URL, files=files)
+    if not response.ok:
+        print_response_error(response)
+
+
+def build_files_dict(schema_version, master_head_sha, contents, key_file):
+    signature_key = import_private_key(key_file)
+
     files = {
         FORM_CONTENTS_KEY: contents,
         FORM_SCHEMA_VERSION_KEY: unicode(schema_version).encode(
@@ -162,9 +189,29 @@ def deploy_database(schema_version, master_head_sha, contents):
         FORM_VERSION_KEY: master_head_sha.encode(FORM_STRING_DATA_ENCODING)
     }
 
-    response = requests.post(DEPLOY_URL, files=files)
-    if not response.ok:
-        print_response_error(response)
+    signed_files = dict()
+    for dict_key, data in files.items():
+        append_file_to_dict(signed_files, dict_key, data, signature_key)
+
+    return signed_files
+
+
+def import_private_key(key_file):
+    return RSA.importKey(open(key_file, 'rb').read())
+
+
+def append_file_to_dict(dict, dict_key, data, signature_key):
+    dict_signature_key = '{}{}'.format(dict_key, FORM_SIGNATURE_SUFFIX)
+
+    dict[dict_key] = data
+    dict[dict_signature_key] = make_signature(data, signature_key)
+
+
+def make_signature(data, key):
+    sha = SHA512.new()
+    sha.update(data)
+
+    return PKCS1_PSS.new(key).sign(sha)
 
 
 def print_response_error(response):
@@ -223,4 +270,4 @@ def cleanup(download_dir):
 
 
 if __name__ == '__main__':
-    deploy_version()
+    main()
