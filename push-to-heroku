@@ -38,7 +38,7 @@ if [ ! -z "$(heroku ps)" ]; # test if have any apps
 then
     heroku ps:scale web=0
 fi
-git push heroku heroku-support:master $push_force
+git push heroku HEAD:master $push_force
 heroku run alembic upgrade head
 heroku ps:scale web=1
 heroku maintenance:off
