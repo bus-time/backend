@@ -90,7 +90,7 @@ You will need SQLite 3.8.+, SSH keygen tool, Python 2.7.+ and PIP installed.
 
   ```
   $ cp <public-rsa-key> backend/deployment-keys
-  $ git push heroku master
+  $ ./push-to-heroku
   ```
 
 3. Install required Python packages.
