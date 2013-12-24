@@ -31,11 +31,7 @@ You will need PostgreSQL 9.+, Python 2.7.+ and PIP installed.
   $ alembic upgrade head
   ```
 
-5. Deploy latest Bus Time database.
-
-  ```
-  $ python application --deploy-version
-  ```
+5. Deploy latest Bus Time database. Use [these instructions](#deploying-bus-time-database-version), but proceed with local repository, not remote Heroku one.
 
 6. Run server.
 
