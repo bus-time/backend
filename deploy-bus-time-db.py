@@ -65,6 +65,29 @@ class Config(object):
         return os.path.dirname(os.path.realpath(__file__))
 
 
+class DescribeDecorator(object):
+    def __init__(self, start=None, done=None):
+        self.start = start
+        self.done = done
+
+    def __call__(self, func):
+        def wrapper(*args, **kwargs):
+            print(self.start or '', end=' ')
+
+            try:
+                result = func(*args, **kwargs)
+                print(self.done or '')
+                return result
+            except:
+                print('')
+                raise
+
+        return wrapper
+
+
+describe = DescribeDecorator
+
+
 def main():
     key_file = Config.get_config_value(Config.VALUE_SIGNATURE_KEY_FILE)
     deploy_version(key_file)
@@ -81,24 +104,6 @@ def deploy_version(key_file):
     deploy_database(schema_version, schema_commit_sha,
                     build_database_contents(repo),
                     key_file)
-
-
-def describe(start=None, done=None):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            print(start or '', end=' ')
-
-            try:
-                result = func(*args, **kwargs)
-                print(done or '')
-                return result
-            except:
-                print('')
-                raise
-
-        return wrapper
-
-    return decorator
 
 
 def connect_to_repo():
