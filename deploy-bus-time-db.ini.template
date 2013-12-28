@@ -1,0 +1,9 @@
+[general]
+repo-owner = win2l
+repo-name = bus-time-database
+repo-branch = master
+version-tag-name-prefix = db-schema-version-
+db-make-target = release
+db-made-file-name = bustime.db.gz
+deploy-url = http://bustime-backend-john-doe.herokuapp.com/db-updates/deploy
+signature-key-file = /home/john.doe/bus-time-deployment-key.private
