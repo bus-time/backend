@@ -76,29 +76,91 @@ describe = DescribeDecorator
 
 
 class VersionDeployer(object):
-    ARCHIVE_FILE_NAME = 'archive.zip'
-    ARCHIVE_FORMAT = 'zipball'
-    DOWNLOAD_DIR_PREFIX = 'bustime-backend-repo'
-    EXTRACTED_ARCHIVE_DIR = 'archive'
-    BRANCH_HEAD_REF_FORMAT = 'heads/{}'
-
     FORM_STRING_DATA_ENCODING = 'utf8'
     FORM_CONTENTS_KEY = 'contents'
     FORM_VERSION_KEY = 'version'
     FORM_SCHEMA_VERSION_KEY = 'schema-version'
     FORM_SIGNATURE_SUFFIX = '-signature'
 
-    def deploy_version(self, key_file):
+    def __init__(self, key_file):
+        self.key_file = key_file
+
+    def deploy_version(self):
+        db_file_info = DbFileMaker().make_db_file_info()
+        if db_file_info is None:
+            return
+
+        schema_version, schema_commit_sha, content = db_file_info
+        self.deploy_database(schema_version, schema_commit_sha, content,
+                             self.key_file)
+
+    @describe(start='Deploying just built database file...', done='done.')
+    def deploy_database(self, schema_version, master_head_sha, contents,
+                        key_file):
+        files = self.build_files_dict(schema_version, master_head_sha, contents,
+                                      key_file)
+        deploy_url = Config.get_config_value(Config.VALUE_DEPLOY_URL)
+        response = requests.post(deploy_url, files=files)
+        if not response.ok:
+            self.print_response_error(response)
+
+    def build_files_dict(self, schema_version, master_head_sha, contents,
+                         key_file):
+        signature_key = self.import_private_key(key_file)
+
+        files = {
+            self.FORM_CONTENTS_KEY: contents,
+            self.FORM_SCHEMA_VERSION_KEY: unicode(schema_version).encode(
+                self.FORM_STRING_DATA_ENCODING),
+            self.FORM_VERSION_KEY: master_head_sha.encode(
+                self.FORM_STRING_DATA_ENCODING)
+        }
+
+        signed_files = dict()
+        for dict_key, data in files.items():
+            self.append_file_to_dict(signed_files, dict_key, data,
+                                     signature_key)
+
+        return signed_files
+
+    def import_private_key(self, key_file):
+        return RSA.importKey(open(key_file, 'rb').read())
+
+    def append_file_to_dict(self, dict, dict_key, data, signature_key):
+        dict_signature_key = '{}{}'.format(dict_key, self.FORM_SIGNATURE_SUFFIX)
+
+        dict[dict_key] = data
+        dict[dict_signature_key] = self.make_signature(data, signature_key)
+
+    def make_signature(self, data, key):
+        sha = SHA512.new()
+        sha.update(data)
+
+        return PKCS1_PSS.new(key).sign(sha)
+
+    def print_response_error(self, response):
+        print('Error {} {}'.format(response.status_code, response.reason))
+        print(response.text)
+
+
+class DbFileMaker(object):
+    ARCHIVE_FILE_NAME = 'archive.zip'
+    ARCHIVE_FORMAT = 'zipball'
+    DOWNLOAD_DIR_PREFIX = 'bustime-backend-repo'
+    EXTRACTED_ARCHIVE_DIR = 'archive'
+    BRANCH_HEAD_REF_FORMAT = 'heads/{}'
+
+    def make_db_file_info(self):
         repo = self.connect_to_repo()
 
         latest_schema_commit_info = self.get_latest_schema_commit_info(repo)
         if not latest_schema_commit_info:
-            return
-        schema_version, schema_commit_sha = latest_schema_commit_info
+            return None
 
-        self.deploy_database(schema_version, schema_commit_sha,
-                             self.build_database_contents(repo),
-                             key_file)
+        schema_version, schema_commit_sha = latest_schema_commit_info
+        contents = self.build_database_contents(repo)
+
+        return schema_version, schema_commit_sha, contents
 
     def connect_to_repo(self):
         username, password = self.get_credentials()
@@ -195,54 +257,6 @@ class VersionDeployer(object):
         print('Latest schema version tag does not reference master HEAD. ' +
               'Nothing to do.')
 
-    @describe(start='Deploying just built database file...', done='done.')
-    def deploy_database(self, schema_version, master_head_sha, contents,
-                        key_file):
-        files = self.build_files_dict(schema_version, master_head_sha, contents,
-                                      key_file)
-        deploy_url = Config.get_config_value(Config.VALUE_DEPLOY_URL)
-        response = requests.post(deploy_url, files=files)
-        if not response.ok:
-            self.print_response_error(response)
-
-    def build_files_dict(self, schema_version, master_head_sha, contents,
-                         key_file):
-        signature_key = self.import_private_key(key_file)
-
-        files = {
-            self.FORM_CONTENTS_KEY: contents,
-            self.FORM_SCHEMA_VERSION_KEY: unicode(schema_version).encode(
-                self.FORM_STRING_DATA_ENCODING),
-            self.FORM_VERSION_KEY: master_head_sha.encode(
-                self.FORM_STRING_DATA_ENCODING)
-        }
-
-        signed_files = dict()
-        for dict_key, data in files.items():
-            self.append_file_to_dict(signed_files, dict_key, data,
-                                     signature_key)
-
-        return signed_files
-
-    def import_private_key(self, key_file):
-        return RSA.importKey(open(key_file, 'rb').read())
-
-    def append_file_to_dict(self, dict, dict_key, data, signature_key):
-        dict_signature_key = '{}{}'.format(dict_key, self.FORM_SIGNATURE_SUFFIX)
-
-        dict[dict_key] = data
-        dict[dict_signature_key] = self.make_signature(data, signature_key)
-
-    def make_signature(self, data, key):
-        sha = SHA512.new()
-        sha.update(data)
-
-        return PKCS1_PSS.new(key).sign(sha)
-
-    def print_response_error(self, response):
-        print('Error {} {}'.format(response.status_code, response.reason))
-        print(response.text)
-
     @describe(start='Building database contents...', done='done.')
     def build_database_contents(self, repo):
         download_dir = self.get_download_dir()
@@ -291,7 +305,7 @@ class VersionDeployer(object):
 
 def main():
     key_file = Config.get_config_value(Config.VALUE_SIGNATURE_KEY_FILE)
-    VersionDeployer().deploy_version(key_file)
+    VersionDeployer(key_file).deploy_version()
 
 
 if __name__ == '__main__':
