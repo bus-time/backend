@@ -75,6 +75,11 @@ class DescribeDecorator(object):
 describe = DescribeDecorator
 
 
+class DbDeploymentError(Exception):
+    def __init__(self, reason):
+        self.reason = reason
+
+
 class VersionDeployer(object):
     FORM_STRING_DATA_ENCODING = 'utf8'
     FORM_CONTENTS_KEY = 'contents'
@@ -83,54 +88,45 @@ class VersionDeployer(object):
     FORM_SIGNATURE_SUFFIX = '-signature'
 
     def __init__(self, key_file):
-        self.key_file = key_file
+        self.signature_key = self.import_private_key(key_file)
+
+    def import_private_key(self, key_file):
+        return RSA.importKey(open(key_file, 'rb').read())
 
     def deploy_version(self):
-        db_file_info = DbFileMaker().make_db_file_info()
-        if db_file_info is None:
-            return
-
-        schema_version, schema_commit_sha, content = db_file_info
-        self.deploy_database(schema_version, schema_commit_sha, content,
-                             self.key_file)
+        schema_version, commit_sha, content = DbFileMaker().make_db_file_info()
+        self.deploy_database(schema_version, commit_sha, content)
 
     @describe(start='Deploying just built database file...', done='done.')
-    def deploy_database(self, schema_version, master_head_sha, contents,
-                        key_file):
-        files = self.build_files_dict(schema_version, master_head_sha, contents,
-                                      key_file)
+    def deploy_database(self, schema_version, commit_sha, contents):
+        files = self.build_files_dict(schema_version, commit_sha, contents)
         deploy_url = Config.get_config_value(Config.VALUE_DEPLOY_URL)
+
         response = requests.post(deploy_url, files=files)
+
         if not response.ok:
-            self.print_response_error(response)
+            raise DbDeploymentError(self.build_error_text(response))
 
-    def build_files_dict(self, schema_version, master_head_sha, contents,
-                         key_file):
-        signature_key = self.import_private_key(key_file)
-
+    def build_files_dict(self, schema_version, commit_sha, contents):
         files = {
             self.FORM_CONTENTS_KEY: contents,
             self.FORM_SCHEMA_VERSION_KEY: unicode(schema_version).encode(
                 self.FORM_STRING_DATA_ENCODING),
-            self.FORM_VERSION_KEY: master_head_sha.encode(
+            self.FORM_VERSION_KEY: commit_sha.encode(
                 self.FORM_STRING_DATA_ENCODING)
         }
 
         signed_files = dict()
         for dict_key, data in files.items():
-            self.append_file_to_dict(signed_files, dict_key, data,
-                                     signature_key)
+            self.append_file_to_dict(signed_files, dict_key, data)
 
         return signed_files
 
-    def import_private_key(self, key_file):
-        return RSA.importKey(open(key_file, 'rb').read())
-
-    def append_file_to_dict(self, dict, dict_key, data, signature_key):
+    def append_file_to_dict(self, dict, dict_key, data):
         dict_signature_key = '{}{}'.format(dict_key, self.FORM_SIGNATURE_SUFFIX)
 
         dict[dict_key] = data
-        dict[dict_signature_key] = self.make_signature(data, signature_key)
+        dict[dict_signature_key] = self.make_signature(data, self.signature_key)
 
     def make_signature(self, data, key):
         sha = SHA512.new()
@@ -138,15 +134,15 @@ class VersionDeployer(object):
 
         return PKCS1_PSS.new(key).sign(sha)
 
-    def print_response_error(self, response):
-        print('Error {} {}'.format(response.status_code, response.reason))
-        print(response.text)
+    def build_error_text(self, response):
+        return 'Error {} {}\n{}'.format(response.status_code,
+                                        response.reason,
+                                        response.text)
 
 
 class DbFileMaker(object):
     ARCHIVE_FILE_NAME = 'archive.zip'
     ARCHIVE_FORMAT = 'zipball'
-    DOWNLOAD_DIR_PREFIX = 'bustime-backend-repo'
     EXTRACTED_ARCHIVE_DIR = 'archive'
     BRANCH_HEAD_REF_FORMAT = 'heads/{}'
 
@@ -177,23 +173,17 @@ class DbFileMaker(object):
                                                             repo_name)
 
     def get_latest_schema_commit_info(self, repo):
-        schema_version, schema_version_commit_sha = (
-            self.get_latest_schema_tag_info(repo))
-        self.describe_latest_schema_tag_info(schema_version,
-                                             schema_version_commit_sha)
-        if not schema_version or not schema_version_commit_sha:
-            return None
+        schema_version, commit_sha = self.get_latest_schema_tag_info(repo)
+        self.describe_latest_schema_tag_info(schema_version, commit_sha)
 
-        master_head_sha = self.get_master_head_sha(repo)
-        self.describe_master_head_sha(master_head_sha)
-        if not master_head_sha:
-            return None
+        head_sha, branch_name = self.get_head_sha_info(repo)
+        self.describe_head_sha(head_sha, branch_name)
 
-        if schema_version_commit_sha != master_head_sha:
-            self.describe_schema_version_tag_not_master_head()
-            return None
+        if commit_sha != head_sha:
+            message = self.make_mismatching_sha_message(branch_name)
+            raise DbDeploymentError(message)
 
-        return schema_version, master_head_sha
+        return schema_version, head_sha
 
     @describe(start='Obtaining latest tag with schema info...', done='done.')
     def get_latest_schema_tag_info(self, repo):
@@ -205,7 +195,8 @@ class DbFileMaker(object):
         if len(tags) > 0:
             return tags[0]
         else:
-            return None, None
+            raise DbDeploymentError('No schema version tags found. ' +
+                                    'Nothing to do.')
 
     def extract_schema_version(self, tag):
         name_prefix = Config.get_config_value(
@@ -225,41 +216,37 @@ class DbFileMaker(object):
 
         return True
 
-    def describe_latest_schema_tag_info(self, schema_version,
-                                        schema_version_commit_sha):
-        if not schema_version or not schema_version_commit_sha:
-            print('No schema version tags found. Nothing to do.')
-        else:
-            message = ("Latest schema version tag is of version {} and " +
-                       "references commit '{}'.")
-            print(message.format(schema_version, schema_version_commit_sha))
+    def describe_latest_schema_tag_info(self, schema_version, commit_sha):
+        message = ("Latest schema version tag is of version {} and " +
+                   "references commit “{}”.")
+        print(message.format(schema_version, commit_sha))
 
-    @describe(start='Obtaining master HEAD sha...', done='done.')
-    def get_master_head_sha(self, repo):
-        head = repo.ref(self.get_head_ref())
-        if head:
-            return head.object.sha
-        else:
-            return None
-
-    def get_head_ref(self):
+    @describe(start='Obtaining HEAD SHA...', done='done.')
+    def get_head_sha_info(self, repo):
         branch_name = Config.get_config_value(Config.VALUE_REPO_BRANCH)
-        return self.BRANCH_HEAD_REF_FORMAT.format(branch_name)
+        head = repo.ref(self.BRANCH_HEAD_REF_FORMAT.format(branch_name))
 
-    def describe_master_head_sha(self, master_head_sha):
-        if not master_head_sha:
-            print('No master HEAD found. It seems the repo has no commits. ' +
-                  'Nothing to do.')
-        else:
-            print("Master HEAD is '{}'.".format(master_head_sha))
+        if not head:
+            raise DbDeploymentError(self.make_no_head_message(branch_name))
 
-    def describe_schema_version_tag_not_master_head(self):
-        print('Latest schema version tag does not reference master HEAD. ' +
-              'Nothing to do.')
+        return head.object.sha, branch_name
+
+    def make_no_head_message(self, branch_name):
+        message = ('No “{}” HEAD found. It seems the repo has no commits. ' +
+                   'Nothing to do.')
+        return message.format(branch_name)
+
+    def describe_head_sha(self, head_sha, branch_name):
+        print("Branch “{}” HEAD is “{}”.".format(branch_name, head_sha))
+
+    def make_mismatching_sha_message(self, branch_name):
+        message = ('Latest schema version tag does not reference “{}” HEAD.' +
+                   'Nothing to do.')
+        return message.format(branch_name)
 
     @describe(start='Building database contents...', done='done.')
     def build_database_contents(self, repo):
-        download_dir = self.get_download_dir()
+        download_dir = tempfile.mkdtemp()
 
         try:
             self.download_master_dir(repo, download_dir)
@@ -269,9 +256,6 @@ class DbFileMaker(object):
                 return f.read()
         finally:
             self.cleanup(download_dir)
-
-    def get_download_dir(self):
-        return tempfile.mkdtemp(prefix=self.DOWNLOAD_DIR_PREFIX)
 
     def download_master_dir(self, repo, download_dir):
         archive_file = self.get_archive_file_name(download_dir)
@@ -305,7 +289,11 @@ class DbFileMaker(object):
 
 def main():
     key_file = Config.get_config_value(Config.VALUE_SIGNATURE_KEY_FILE)
-    VersionDeployer(key_file).deploy_version()
+
+    try:
+        VersionDeployer(key_file).deploy_version()
+    except DbDeploymentError as e:
+        print(e.reason)
 
 
 if __name__ == '__main__':
