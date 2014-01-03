@@ -15,7 +15,7 @@ You will need PostgreSQL 9.+, Python 2.7.+ and PIP installed.
 2. Create configuration file.
 
   ```
-  $ mv backend.ini.template backend.ini
+  $ cp backend.ini.template backend.ini
   $ vi backend.ini
   ```
 
@@ -60,14 +60,13 @@ You will need Heroku account and Heroku Toolbelt set up to work with your accoun
     ...
   ```
 
-3. Promote just created database to be a default one so that its URL will be accessible via
-`DATABASE_URL` evironment variable.
+3. Promote just created database to be a default one.
 
   ```
   $ heroku pg:promote HEROKU_POSTGRESQL_<COLOR>_URL
   ```
 
-5. Push the repository to Heroku via a convenience script.
+4. Push the repository to Heroku via a convenience script.
 
   ```
   $ ./push-to-heroku
@@ -75,7 +74,7 @@ You will need Heroku account and Heroku Toolbelt set up to work with your accoun
 
 ## Deploying Bus Time Database Version
 
-You will need SQLite 3.8.+, SSH keygen tool, Python 2.7.+ and PIP installed.
+You will need SQLite 3.8.+, SSH, Python 2.7.+ and PIP installed.
 
 1. Generate RSA key pair that will be used for deploy data signing.
 
