@@ -39,6 +39,6 @@ then
     heroku ps:scale web=0
 fi
 git push heroku HEAD:master $push_force
-heroku run alembic upgrade head
+heroku run 'alembic -c config/alembic.ini upgrade head'
 heroku ps:scale web=1
 heroku maintenance:off

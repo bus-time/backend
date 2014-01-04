@@ -18,6 +18,7 @@ import requests
 
 
 class Config(object):
+    CONFIG_FILE_DIR = 'config'
     CONFIG_FILE_NAME = 'deploy-bus-time-db.ini'
     CONFIG_SECTION_NAME = 'general'
 
@@ -44,8 +45,12 @@ class Config(object):
 
     @classmethod
     def get_config_file_path(cls):
-        dir = os.path.abspath(cls.get_script_dir())
-        return os.path.join(dir, cls.CONFIG_FILE_NAME)
+        return os.path.join(cls.get_config_dir_path(), cls.CONFIG_FILE_NAME)
+
+    @classmethod
+    def get_config_dir_path(cls):
+        relative_path = os.path.join(cls.get_script_dir(), cls.CONFIG_FILE_DIR)
+        return os.path.abspath(relative_path)
 
     @classmethod
     def get_script_dir(cls):

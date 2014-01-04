@@ -7,6 +7,7 @@ import ConfigParser
 
 
 class Config(object):
+    CONFIG_FILE_DIR = '../config'
     CONFIG_FILE_NAME = 'backend.ini'
     CONFIG_SECTION_NAME = 'general'
 
@@ -15,8 +16,6 @@ class Config(object):
 
     ENV_HEROKU_DATABASE_URL = 'DATABASE_URL'
     HEROKU_TMP_DIR = '/tmp'
-
-    DEPLOYMENT_KEY_DIR = 'deployment-keys'
 
     @classmethod
     def get_config_value(cls, value_name):
@@ -50,8 +49,12 @@ class Config(object):
 
     @classmethod
     def get_config_file_path(cls):
-        dir = os.path.abspath(os.path.join(cls.get_script_dir(), '..'))
-        return os.path.join(dir, cls.CONFIG_FILE_NAME)
+        return os.path.join(cls.get_config_dir_path(), cls.CONFIG_FILE_NAME)
+
+    @classmethod
+    def get_config_dir_path(cls):
+        relative_path = os.path.join(cls.get_script_dir(), cls.CONFIG_FILE_DIR)
+        return os.path.abspath(relative_path)
 
     @classmethod
     def get_script_dir(cls):
@@ -59,4 +62,4 @@ class Config(object):
 
     @classmethod
     def get_deployment_key_dir(cls):
-        return os.path.join(cls.get_script_dir(), cls.DEPLOYMENT_KEY_DIR)
+        return cls.get_config_dir_path()
