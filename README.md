@@ -15,31 +15,30 @@ You will need PostgreSQL 9.+, Python 2.7.+ and PIP installed.
 2. Create configuration file.
 
   ```
-  $ cp backend.ini.template backend.ini
-  $ vi backend.ini
+  $ cp config/backend.ini.template config/backend.ini
+  $ vi config/backend.ini
   ```
 
 3. Install required Python packages.
 
   ```
-  $ pip install --requirement requirements.txt
+  $ pip install --requirement requirements.txt --no-deps
   ```
 
 4. Update database schema.
 
   ```
-  $ alembic upgrade head
+  $ alembic -c config/alembic.ini upgrade head
   ```
 
-5. Deploy latest Bus Time database. Use [these instructions]
+5. Run server.
+  ```
+  $ python application.py
+  ```
+
+6. Optionally deploy latest Bus Time database. Use [these instructions]
 (#deploying-bus-time-database-version), but proceed with local repository,
 not remote Heroku one.
-
-6. Run server.
-
-  ```
-  $ python application --run-server
-  ```
 
 ## Deploying to Heroku
 
@@ -60,7 +59,7 @@ You will need Heroku account and Heroku Toolbelt set up to work with your accoun
     ...
   ```
 
-3. Promote just created database to be a default one.
+3. Promote just created database to be the default one.
 
   ```
   $ heroku pg:promote HEROKU_POSTGRESQL_<COLOR>_URL
@@ -69,7 +68,7 @@ You will need Heroku account and Heroku Toolbelt set up to work with your accoun
 4. Push the repository to Heroku via a convenience script.
 
   ```
-  $ ./push-to-heroku
+  $ sh push-to-heroku.sh
   ```
 
 ## Deploying Bus Time Database Version
@@ -88,18 +87,26 @@ You will need SQLite 3.8.+, SSH, Python 2.7.+ and PIP installed.
 2. Push your public key to Heroku.
 
   ```
-  $ cp <public-rsa-key> backend/deployment-keys
-  $ ./push-to-heroku
+  $ cp <public-rsa-key> config
+  $ git add .
+  $ git commit
+  $ sh push-to-heroku.sh
   ```
 
-3. Install required Python packages.
+3. Create configuration file.
+  ```
+  $ cp config/deploy-bus-time-db.ini.template config/deploy-bus-time-db.ini
+  $ vi config/deploy-bus-time-db.ini
+  ```
+
+4. Install required Python packages.
 
   ```
-  $ pip install --requirement requirements.txt
+  $ pip install --requirement requirements.txt --no-deps
   ```
 
-4. Deploy latest version available in Bus Time Database repo.
+5. Deploy latest version available in Bus Time Database repo.
 
   ```
-  $ python deploy-bus-time-db.py -f <private-rsa-key>
+  $ python deploy-bus-time-db.py
   ```
