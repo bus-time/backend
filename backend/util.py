@@ -12,7 +12,6 @@ class Config(object):
     CONFIG_SECTION_NAME = 'general'
 
     VALUE_DB_URL = 'db-url'
-    VALUE_DB_REPO_DOWNLOAD_DIR = 'db-repo-download-dir'
 
     ENV_HEROKU_DATABASE_URL = 'DATABASE_URL'
     HEROKU_TMP_DIR = '/tmp'
@@ -44,7 +43,6 @@ class Config(object):
     def get_heroku_defaults(cls):
         return {
             cls.VALUE_DB_URL: os.environ[cls.ENV_HEROKU_DATABASE_URL],
-            cls.VALUE_DB_REPO_DOWNLOAD_DIR: cls.HEROKU_TMP_DIR
         }
 
     @classmethod
