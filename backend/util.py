@@ -4,29 +4,33 @@
 from __future__ import absolute_import, unicode_literals
 import os
 import ConfigParser
+import collections
 
 
 class Config(object):
+    ConfigKey = collections.namedtuple('ConfigKey', ['section', 'option'])
+
     CONFIG_FILE_DIR = '../config'
     CONFIG_FILE_NAME = 'backend.ini'
-    CONFIG_SECTION_NAME = 'general'
 
-    VALUE_DB_URL = 'db-url'
+    VALUE_DB_URL = ConfigKey('db', 'url')
 
     ENV_HEROKU_DATABASE_URL = 'DATABASE_URL'
     HEROKU_TMP_DIR = '/tmp'
 
     @classmethod
-    def get_config_value(cls, value_name):
-        return cls.get_config_parser().get(cls.CONFIG_SECTION_NAME, value_name)
+    def get_config_value(cls, config_key):
+        parser = cls.get_config_parser()
+        if not parser.has_section(config_key.section):
+            parser.add_section(config_key.section)
+
+        return parser.get(config_key.section, config_key.option)
 
     @classmethod
     def get_config_parser(cls):
-        config = ConfigParser.SafeConfigParser(defaults=cls.get_defaults())
-        config.read(cls.get_config_file_path())
-        if not config.has_section(cls.CONFIG_SECTION_NAME):
-            config.add_section(cls.CONFIG_SECTION_NAME)
-        return config
+        parser = ConfigParser.SafeConfigParser(defaults=cls.get_defaults())
+        parser.read(cls.get_config_file_path())
+        return parser
 
     @classmethod
     def get_defaults(cls):
@@ -42,7 +46,7 @@ class Config(object):
     @classmethod
     def get_heroku_defaults(cls):
         return {
-            cls.VALUE_DB_URL: os.environ[cls.ENV_HEROKU_DATABASE_URL],
+            cls.VALUE_DB_URL.option: os.environ[cls.ENV_HEROKU_DATABASE_URL],
         }
 
     @classmethod

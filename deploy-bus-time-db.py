@@ -13,35 +13,42 @@ from zipfile import ZipFile
 from Crypto.Hash import SHA512
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
+import collections
 import github3
 import requests
 
 
 class Config(object):
+    ConfigKey = collections.namedtuple('ConfigKey', ['section', 'option'])
+
     CONFIG_FILE_DIR = 'config'
     CONFIG_FILE_NAME = 'deploy-bus-time-db.ini'
     CONFIG_SECTION_NAME = 'general'
 
-    VALUE_REPO_OWNER = 'repo-owner'
-    VALUE_REPO_NAME = 'repo-name'
-    VALUE_REPO_BRANCH = 'repo-branch'
-    VALUE_VERSION_TAG_NAME_PREFIX = 'version-tag-name-prefix'
-    VALUE_DB_MAKE_TARGET = 'db-make-target'
-    VALUE_DB_MADE_FILE_NAME = 'db-made-file-name'
-    VALUE_DEPLOY_URL = 'deploy-url'
-    VALUE_SIGNATURE_KEY_FILE = 'signature-key-file'
+    VALUE_REPO_OWNER = ConfigKey('repo', 'owner')
+    VALUE_REPO_NAME = ConfigKey('repo', 'name')
+    VALUE_REPO_BRANCH = ConfigKey('repo', 'branch')
+
+    VALUE_BUILD_MAKE_TARGET = ConfigKey('build', 'make-target')
+    VALUE_BUILD_MADE_FILE_NAME = ConfigKey('build', 'made-file-name')
+    VALUE_BUILD_VERSION_TAG_PREFIX = ConfigKey('build', 'version-tag-prefix')
+
+    VALUE_DEPLOY_URL = ConfigKey('deploy', 'url')
+    VALUE_DEPLOY_SIGNATURE_KEY_FILE = ConfigKey('deploy', 'signature-key-file')
 
     @classmethod
-    def get_config_value(cls, value_name):
-        return cls.get_config_parser().get(cls.CONFIG_SECTION_NAME, value_name)
+    def get_config_value(cls, config_key):
+        parser = cls.get_config_parser()
+        if not parser.has_section(config_key.section):
+            parser.add_section(config_key.section)
+
+        return parser.get(config_key.section, config_key.option)
 
     @classmethod
     def get_config_parser(cls):
-        config = ConfigParser.SafeConfigParser()
-        config.read(cls.get_config_file_path())
-        if not config.has_section(cls.CONFIG_SECTION_NAME):
-            config.add_section(cls.CONFIG_SECTION_NAME)
-        return config
+        parser = ConfigParser.SafeConfigParser()
+        parser.read(cls.get_config_file_path())
+        return parser
 
     @classmethod
     def get_config_file_path(cls):
@@ -205,12 +212,12 @@ class DbFileMaker(object):
 
     def extract_schema_version(self, tag):
         name_prefix = Config.get_config_value(
-            Config.VALUE_VERSION_TAG_NAME_PREFIX)
+            Config.VALUE_BUILD_VERSION_TAG_PREFIX)
         return int(tag.name[len(name_prefix):])
 
     def is_schema_version_tag(self, tag):
         name_prefix = Config.get_config_value(
-            Config.VALUE_VERSION_TAG_NAME_PREFIX)
+            Config.VALUE_BUILD_VERSION_TAG_PREFIX)
         if not tag.name.startswith(name_prefix):
             return False
 
@@ -278,8 +285,9 @@ class DbFileMaker(object):
 
     def make_database_file(self, download_dir):
         make_dir = self.get_make_dir(download_dir)
-        make_target = Config.get_config_value(Config.VALUE_DB_MAKE_TARGET)
-        db_file_name = Config.get_config_value(Config.VALUE_DB_MADE_FILE_NAME)
+        make_target = Config.get_config_value(Config.VALUE_BUILD_MAKE_TARGET)
+        db_file_name = Config.get_config_value(
+            Config.VALUE_BUILD_MADE_FILE_NAME)
 
         subprocess.check_call(['make', make_target, '--directory', make_dir])
         return os.path.join(make_dir, db_file_name)
@@ -293,7 +301,7 @@ class DbFileMaker(object):
 
 
 def main():
-    key_file = Config.get_config_value(Config.VALUE_SIGNATURE_KEY_FILE)
+    key_file = Config.get_config_value(Config.VALUE_DEPLOY_SIGNATURE_KEY_FILE)
 
     try:
         VersionDeployer(key_file).deploy_version()

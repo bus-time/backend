@@ -1,2 +1,2 @@
-[general]
-db-url = postgresql://username:password@host/dbname
+[db]
+url = postgresql://username:password@host/dbname
