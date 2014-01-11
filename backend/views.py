@@ -6,11 +6,12 @@ import glob
 import httplib
 import itertools
 import os
+import collections
 
 from Crypto.Hash import SHA512
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
-from flask import jsonify, url_for, make_response, request
+from flask import jsonify, make_response, request
 from werkzeug.exceptions import abort
 
 from backend.server import app
@@ -18,214 +19,210 @@ from backend.db import Database, db_session
 from backend.util import Config
 
 
-CONTENT_TYPE_OCTET_STREAM = 'application/octet-stream'
-CONTENT_DISPOSITION_DB_FILE = 'attachment; filename=bus-time.db'
-
-FORM_STRING_DATA_ENCODING = 'utf8'
-FORM_CONTENTS_KEY = 'contents'
-FORM_VERSION_KEY = 'version'
-FORM_SCHEMA_VERSION_KEY = 'schema-version'
-FORM_SIGNATURE_SUFFIX = '-signature'
-
-SCHEMA_VERSION_MIN = 1
-SCHEMA_VERSION_MAX = 2 ** 16
-
-ERROR_MORE_RECENT_SCHEMA_DEPLOYED = 'More recent schema deployed'
-ERROR_VERSION_ALREADY_DEPLOYED = 'Version is already deployed'
-ERROR_INVALID_SCHEMA_VERSION = 'Invalid schema version specified'
-ERROR_NOT_ALL_FORM_FIELDS = 'Not all form fields specified'
-ERROR_AUTHENTICATION_FAILED = 'Authentication failed'
-
-DEPLOYMENT_KEY_EXT = 'pub'
-
-
 @app.route('/databases/<int:schema_version>')
 def database_info(schema_version):
-    database = (Database.query
-                .filter(Database.schema_version == schema_version)
-                .first())
-
-    if not database:
-        abort(httplib.NOT_FOUND)
-
-    return jsonify(build_version_info_dict(database))
-
-
-def build_version_info_dict(database):
-    return {
-        'schema_version': database.schema_version,
-        'version': database.version
-    }
+    database = find_database(schema_version)
+    return HttpUtils.build_database_info_response(database)
 
 
 @app.route('/databases/<int:schema_version>/content')
 def database_content(schema_version):
-    database = (Database.query
-                .filter(Database.schema_version == schema_version)
-                .first())
+    database = find_database(schema_version)
+    return HttpUtils.build_database_contents_response(database)
+
+
+def find_database(schema_version):
+    database = Database.find_by_schema_version(schema_version)
 
     if not database:
         abort(httplib.NOT_FOUND)
 
-    return build_db_contents_response(database.contents)
-
-
-def build_db_contents_response(contents):
-    response = make_response(contents)
-    response.headers['Content-Type'] = CONTENT_TYPE_OCTET_STREAM
-    response.headers['Content-Disposition'] = CONTENT_DISPOSITION_DB_FILE
-    return response
+    return database
 
 
 @app.route('/databases', methods=['POST'])
 def database_deploy():
     try:
-        contents, schema_version, version = read_deploy_data(request)
-        update_database(contents, schema_version, version)
+        schema_version = Deployer().deploy_database(request.files)
     except DeployDataError as e:
-        return make_error_response(e.error,
-                                   httplib.BAD_REQUEST)
+        return HttpUtils.make_error_response(e.error, httplib.BAD_REQUEST)
     except DeployConfictError as e:
-        return make_error_response(e.error, httplib.CONFLICT)
+        return HttpUtils.make_error_response(e.error, httplib.CONFLICT)
     except DeployAuthenticationError as e:
-        return make_error_response(ERROR_AUTHENTICATION_FAILED,
-                                   httplib.UNAUTHORIZED)
+        return HttpUtils.make_error_response(e.error, httplib.UNAUTHORIZED)
 
     return database_info(schema_version)
 
 
-def read_deploy_data(request):
-    files = read_signed_files(request, (FORM_CONTENTS_KEY,
-                                        FORM_SCHEMA_VERSION_KEY,
-                                        FORM_VERSION_KEY))
+class HttpUtils(object):
+    CONTENT_TYPE_OCTET_STREAM = 'application/octet-stream'
+    CONTENT_DISPOSITION_DB_FILE = 'attachment; filename=bus-time.db'
 
-    contents = files[FORM_CONTENTS_KEY]
-    schema_version = read_schema_version(files)
-    version = read_form_string_data(files, FORM_VERSION_KEY)
+    @classmethod
+    def build_database_info_response(cls, database):
+        version_info_dict = {
+            'schema_version': database.schema_version,
+            'version': database.version
+        }
 
-    return contents, schema_version, version
+        return jsonify(version_info_dict)
+
+    @classmethod
+    def build_database_contents_response(cls, database):
+        response = make_response(database.contents)
+
+        headers = {
+            'Content-Type': cls.CONTENT_TYPE_OCTET_STREAM,
+            'Content-Disposition': cls.CONTENT_DISPOSITION_DB_FILE
+        }
+        response.headers.extend(headers)
+
+        return response
+
+    @classmethod
+    def make_error_response(cls, error, code):
+        response = {
+            'error': error
+        }
+
+        return jsonify(response), code
 
 
-def read_signed_files(request, keys):
-    signed_file_pairs = {k: build_signed_file_pair(request, k) for k in keys}
-    verify_signed_file_pairs(signed_file_pairs)
-    return {k: signed_file_pairs[k][0] for k in signed_file_pairs.keys()}
+class Deployer(object):
+    FORM_CONTENTS_KEY = 'contents'
+    FORM_VERSION_KEY = 'version'
+    FORM_SCHEMA_VERSION_KEY = 'schema-version'
+    FORM_SIGNATURE_SUFFIX = '-signature'
+    FORM_STRING_DATA_ENCODING = 'utf8'
 
+    DEPLOYMENT_KEY_EXT = 'pub'
 
-def build_signed_file_pair(request, key):
-    signature_key = '{}{}'.format(key, FORM_SIGNATURE_SUFFIX)
+    ERROR_NOT_ALL_FORM_FIELDS = 'Not all form fields specified'
+    ERROR_INVALID_SCHEMA_VERSION = 'Invalid schema version specified'
+    ERROR_MORE_RECENT_SCHEMA_DEPLOYED = 'More recent schema deployed'
+    ERROR_VERSION_ALREADY_DEPLOYED = 'Version is already deployed'
 
-    if not key in request.files or not signature_key in request.files:
-        raise DeployDataError(ERROR_NOT_ALL_FORM_FIELDS)
+    SCHEMA_VERSION_MIN = 1
+    SCHEMA_VERSION_MAX = 2 ** 16
 
-    return (request.files[key].stream.read(),
-            request.files[key + FORM_SIGNATURE_SUFFIX].stream.read())
+    SignedFile = collections.namedtuple('SignedFile', ['data', 'signature'])
 
+    def deploy_database(self, files):
+        contents, schema_version, version = self.read_deploy_data(files)
+        self.update_database(contents, schema_version, version)
 
-def verify_signed_file_pairs(pairs):
-    if len(pairs) == 0:
-        return True
+        return schema_version
 
-    public_key = get_matched_public_key(pairs.itervalues().next())
-    if not public_key:
-        raise DeployAuthenticationError()
+    def read_deploy_data(self, files):
+        files = self.read_signed_files(files, (self.FORM_CONTENTS_KEY,
+                                               self.FORM_SCHEMA_VERSION_KEY,
+                                               self.FORM_VERSION_KEY))
 
-    for pair in itertools.islice(pairs.itervalues(), 1):
-        if not is_signed_file_authentic(pair, public_key):
+        contents = files[self.FORM_CONTENTS_KEY]
+        schema_version = self.read_schema_version(files)
+        version = self.read_form_string_data(files, self.FORM_VERSION_KEY)
+
+        return contents, schema_version, version
+
+    def read_signed_files(self, files, keys):
+        signed_files = {k: self.build_signed_files(files, k) for k in keys}
+        self.verify_signed_files(signed_files)
+        return {k: signed_files[k].data for k in signed_files.keys()}
+
+    def build_signed_files(self, files, key):
+        signature_key = '{}{}'.format(key, self.FORM_SIGNATURE_SUFFIX)
+
+        if not key in files or not signature_key in files:
+            raise DeployDataError(self.ERROR_NOT_ALL_FORM_FIELDS)
+
+        return self.SignedFile(
+            files[key].stream.read(),
+            files[key + self.FORM_SIGNATURE_SUFFIX].stream.read()
+        )
+
+    def verify_signed_files(self, signed_files):
+        if len(signed_files) == 0:
+            return
+
+        public_key = self.find_public_key(signed_files.itervalues().next())
+        if not public_key:
             raise DeployAuthenticationError()
 
+        for signed_file in itertools.islice(signed_files.itervalues(), 1):
+            if not self.is_signed_file_authentic(signed_file, public_key):
+                raise DeployAuthenticationError()
 
-def get_matched_public_key(pair):
-    for key in get_public_keys():
-        if is_signed_file_authentic(pair, key):
-            return key
+    def find_public_key(self, signed_file):
+        for key in self.get_public_keys():
+            if self.is_signed_file_authentic(signed_file, key):
+                return key
 
-    return None
+        return None
 
+    def get_public_keys(self):
+        key_file_mask = os.path.join(Config.get_deployment_key_dir(),
+                                     '*.{}'.format(self.DEPLOYMENT_KEY_EXT))
+        for key_file in glob.glob(key_file_mask):
+            yield self.import_public_key(key_file)
 
-def get_public_keys():
-    key_file_mask = os.path.join(Config.get_deployment_key_dir(),
-                                 '*.{}'.format(DEPLOYMENT_KEY_EXT))
-    for key_file in glob.glob(key_file_mask):
-        yield import_public_key(key_file)
+    def import_public_key(self, key_file):
+        return RSA.importKey(open(key_file, 'rb').read())
 
+    def is_signed_file_authentic(self, signed_file, key):
+        sha = SHA512.new()
+        sha.update(signed_file.data)
 
-def import_public_key(key_file):
-    return RSA.importKey(open(key_file, 'rb').read())
+        return PKCS1_PSS.new(key).verify(sha, signed_file.signature)
 
+    def read_schema_version(self, files):
+        try:
+            schema_version_str = self.read_form_string_data(
+                files, self.FORM_SCHEMA_VERSION_KEY)
+            schema_version_int = int(schema_version_str)
+        except ValueError:
+            raise DeployDataError(self.ERROR_INVALID_SCHEMA_VERSION)
 
-def is_signed_file_authentic(pair, key):
-    data, signature = pair
+        if not self.in_range(schema_version_int,
+                             self.SCHEMA_VERSION_MIN,
+                             self.SCHEMA_VERSION_MAX):
+            raise DeployDataError(self.ERROR_INVALID_SCHEMA_VERSION)
 
-    sha = SHA512.new()
-    sha.update(data)
+        return schema_version_int
 
-    return PKCS1_PSS.new(key).verify(sha, signature)
+    def in_range(self, value, range_min, range_max):
+        return range_min <= value <= range_max
 
+    def read_form_string_data(self, files, key):
+        return files[key].decode(self.FORM_STRING_DATA_ENCODING)
 
-def read_schema_version(files):
-    try:
-        schema_version_str = read_form_string_data(
-            files, FORM_SCHEMA_VERSION_KEY)
-        schema_version_int = int(schema_version_str)
-    except ValueError:
-        raise DeployDataError(ERROR_INVALID_SCHEMA_VERSION)
+    def update_database(self, contents, schema_version, version):
+        database = Database.find_latest()
 
-    if not (SCHEMA_VERSION_MIN <= schema_version_int <= SCHEMA_VERSION_MAX):
-        raise DeployDataError(ERROR_INVALID_SCHEMA_VERSION)
+        self.check_database_conflicts(database, schema_version, version)
 
-    return schema_version_int
+        if database and database.schema_version == schema_version:
+            self.delete_database(database)
 
+        self.create_database(contents, schema_version, version)
 
-def read_form_string_data(files, key):
-    return files[key].decode(FORM_STRING_DATA_ENCODING)
+        db_session.commit()
 
+    def check_database_conflicts(self, database, schema_version, version):
+        if database and database.schema_version > schema_version:
+            raise DeployConfictError(self.ERROR_MORE_RECENT_SCHEMA_DEPLOYED)
 
-def update_database(contents, schema_version, version):
-    database = get_latest_deployed_database()
+        if database and database.version == version:
+            raise DeployConfictError(self.ERROR_VERSION_ALREADY_DEPLOYED)
 
-    check_database_conflicts(database, schema_version, version)
+    def delete_database(self, database):
+        db_session.delete(database)
+        db_session.flush()
 
-    if database and database.schema_version == schema_version:
-        delete_database(database)
-
-    create_database(contents, schema_version, version)
-
-    db_session.commit()
-
-
-def get_latest_deployed_database():
-    return (Database.query
-            .order_by(Database.schema_version.desc())
-            .first())
-
-
-def check_database_conflicts(database, schema_version, version):
-    if database and database.schema_version > schema_version:
-        raise DeployConfictError(ERROR_MORE_RECENT_SCHEMA_DEPLOYED)
-
-    if database and database.version == version:
-        raise DeployConfictError(ERROR_VERSION_ALREADY_DEPLOYED)
-
-
-def delete_database(database):
-    db_session.delete(database)
-    db_session.flush()
-
-
-def create_database(contents, schema_version, version):
-    database = Database(schema_version=schema_version,
-                        version=version,
-                        contents=contents)
-    db_session.add(database)
-
-
-def make_error_response(error, code):
-    response = {
-        'error': error
-    }
-
-    return jsonify(response), code
+    def create_database(self, contents, schema_version, version):
+        database = Database(schema_version=schema_version,
+                            version=version,
+                            contents=contents)
+        db_session.add(database)
 
 
 class DeployDataError(ValueError):
@@ -239,4 +236,4 @@ class DeployConfictError(ValueError):
 
 
 class DeployAuthenticationError(ValueError):
-    pass
+    error = 'Authentication failed'
