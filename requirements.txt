@@ -1,4 +1,5 @@
 Flask==0.10.1
+Flask-Compress==1.0.0
 Jinja2==2.7.1
 Mako==0.9.0
 MarkupSafe==0.18

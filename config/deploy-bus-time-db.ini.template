@@ -4,8 +4,8 @@ name = bus-time-database
 branch = master
 
 [build]
-make-target = release
-made-file-name = bustime.db.gz
+make-target = database
+made-file-name = bustime.db
 version-tag-prefix = db-schema-version-
 
 [deploy]

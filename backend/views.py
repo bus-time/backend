@@ -19,7 +19,7 @@ from backend.util import Config
 
 
 CONTENT_TYPE_OCTET_STREAM = 'application/octet-stream'
-CONTENT_DISPOSITION_DB_FILE = 'attachment; filename=file.db.gz'
+CONTENT_DISPOSITION_DB_FILE = 'attachment; filename=bus-time.db'
 
 FORM_STRING_DATA_ENCODING = 'utf8'
 FORM_CONTENTS_KEY = 'contents'
