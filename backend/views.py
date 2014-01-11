@@ -59,7 +59,7 @@ def build_version_info_dict(database):
 
 
 @app.route('/databases/<int:schema_version>/content')
-def database_content(key):
+def database_content(schema_version):
     database = (Database.query
                 .filter(Database.schema_version == schema_version)
                 .first())
