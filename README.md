@@ -28,7 +28,7 @@ You will need PostgreSQL 9.+, Python 2.7.+ and PIP installed.
 4. Update database schema.
 
   ```
-  $ alembic -c config/alembic.ini upgrade head
+  $ alembic --config config/alembic.ini upgrade head
   ```
 
 5. Run server.
