@@ -4,10 +4,10 @@ name = bus-time-database
 branch = master
 
 [build]
-make-target = release
-made-file-name = bustime.db.gz
+make-target = database
+made-file-name = bustime.db
 version-tag-prefix = db-schema-version-
 
 [deploy]
-url = http://bustime-backend-john-doe.herokuapp.com/db-updates/deploy
+url = http://bustime-backend-john-doe.herokuapp.com/databases
 signature-key-file = /home/john.doe/bus-time-deployment-key.private
