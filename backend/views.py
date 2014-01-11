@@ -39,13 +39,8 @@ ERROR_AUTHENTICATION_FAILED = 'Authentication failed'
 DEPLOYMENT_KEY_EXT = 'pub'
 
 
-@app.route('/')
-def index():
-    return 'Hello from Bus Time Backend!'
-
-
-@app.route('/db-updates/version/<int:schema_version>')
-def db_updates_version(schema_version):
+@app.route('/databases/<int:schema_version>')
+def database_info(schema_version):
     database = (Database.query
                 .filter(Database.schema_version == schema_version)
                 .first())
@@ -59,19 +54,14 @@ def db_updates_version(schema_version):
 def build_version_info_dict(database):
     return {
         'schema_version': database.schema_version,
-        'version': database.version,
-        'file_url': full_url_for('db_updates_file', key=database.id)
+        'version': database.version
     }
 
 
-def full_url_for(endpoint, **values):
-    return url_for(endpoint, _external=True, **values)
-
-
-@app.route('/db-updates/file/<int:key>')
-def db_updates_file(key):
+@app.route('/databases/<int:schema_version>/content')
+def database_content(key):
     database = (Database.query
-                .filter(Database.id == key)
+                .filter(Database.schema_version == schema_version)
                 .first())
 
     if not database:
@@ -87,8 +77,8 @@ def build_db_contents_response(contents):
     return response
 
 
-@app.route('/db-updates/deploy', methods=['POST'])
-def db_updates_deploy():
+@app.route('/databases', methods=['POST'])
+def database_deploy():
     try:
         contents, schema_version, version = read_deploy_data(request)
         update_database(contents, schema_version, version)
@@ -101,7 +91,7 @@ def db_updates_deploy():
         return make_error_response(ERROR_AUTHENTICATION_FAILED,
                                    httplib.UNAUTHORIZED)
 
-    return db_updates_version(schema_version)
+    return database_info(schema_version)
 
 
 def read_deploy_data(request):
