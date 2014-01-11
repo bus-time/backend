@@ -3,12 +3,12 @@
 
 
 from __future__ import absolute_import, unicode_literals, print_function
-import ConfigParser
 from getpass import getpass
+from zipfile import ZipFile
+import ConfigParser
 import os
 import subprocess
 import tempfile
-from zipfile import ZipFile
 
 from Crypto.Hash import SHA512
 from Crypto.PublicKey import RSA
@@ -39,6 +39,7 @@ class Config(object):
     @classmethod
     def get_config_value(cls, config_key):
         parser = cls.get_config_parser()
+
         if not parser.has_section(config_key.section):
             parser.add_section(config_key.section)
 
@@ -111,8 +112,8 @@ class VersionDeployer(object):
 
     @describe(start='Deploying just built database file...', done='done.')
     def deploy_database(self, schema_version, commit_sha, contents):
-        files = self.build_files_dict(schema_version, commit_sha, contents)
         deploy_url = Config.get_config_value(Config.VALUE_DEPLOY_URL)
+        files = self.build_files_dict(schema_version, commit_sha, contents)
 
         response = requests.post(deploy_url, files=files)
 
@@ -129,6 +130,7 @@ class VersionDeployer(object):
         }
 
         signed_files = dict()
+
         for dict_key, data in files.items():
             self.append_file_to_dict(signed_files, dict_key, data)
 
@@ -166,7 +168,7 @@ class DbFileMaker(object):
             return None
 
         schema_version, schema_commit_sha = latest_schema_commit_info
-        contents = self.build_database_contents(repo)
+        contents = self.build_database_contents(repo, schema_commit_sha)
 
         return schema_version, schema_commit_sha, contents
 
@@ -181,6 +183,7 @@ class DbFileMaker(object):
     def login_to_repo(self, username, password):
         repo_owner = Config.get_config_value(Config.VALUE_REPO_OWNER)
         repo_name = Config.get_config_value(Config.VALUE_REPO_NAME)
+
         return github3.login(username, password).repository(repo_owner,
                                                             repo_name)
 
@@ -257,11 +260,11 @@ class DbFileMaker(object):
         return message.format(branch_name)
 
     @describe(start='Building database contents...', done='done.')
-    def build_database_contents(self, repo):
+    def build_database_contents(self, repo, commit):
         download_dir = tempfile.mkdtemp()
 
         try:
-            self.download_master_dir(repo, download_dir)
+            self.download_dir(repo, commit, download_dir)
             database_file = self.make_database_file(download_dir)
 
             with open(database_file, 'rb') as f:
@@ -269,10 +272,10 @@ class DbFileMaker(object):
         finally:
             self.cleanup(download_dir)
 
-    def download_master_dir(self, repo, download_dir):
+    def download_dir(self, repo, commit, download_dir):
         archive_file = self.get_archive_file_name(download_dir)
 
-        if not repo.archive(self.ARCHIVE_FORMAT, path=archive_file):
+        if not repo.archive(self.ARCHIVE_FORMAT, path=archive_file, ref=commit):
             raise RuntimeError('Error downloading the archive')
 
         ZipFile(archive_file).extractall(self.get_extracted_dir(download_dir))
