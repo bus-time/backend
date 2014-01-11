@@ -188,14 +188,22 @@ def update_database(contents, schema_version, version):
 
     if database and database.schema_version == schema_version:
         delete_database(database)
+
     create_database(contents, schema_version, version)
 
     db_session.commit()
 
 
+def get_latest_deployed_database():
+    return (Database.query
+            .order_by(Database.schema_version.desc())
+            .first())
+
+
 def check_database_conflicts(database, schema_version, version):
     if database and database.schema_version > schema_version:
         raise DeployConfictError(ERROR_MORE_RECENT_SCHEMA_DEPLOYED)
+
     if database and database.version == version:
         raise DeployConfictError(ERROR_VERSION_ALREADY_DEPLOYED)
 
@@ -218,12 +226,6 @@ def make_error_response(error, code):
     }
 
     return jsonify(response), code
-
-
-def get_latest_deployed_database():
-    return (Database.query
-            .order_by(Database.schema_version.desc())
-            .first())
 
 
 class DeployDataError(ValueError):
