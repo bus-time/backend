@@ -22,7 +22,9 @@ function print_unknown_args() {
 
 function stop_heroku() {
     heroku maintenance:on
-    heroku ps:scale web=0
+    if [ ! -z "$(heroku ps)" ]; then
+        heroku ps:scale web=0
+    fi
 }
 
 function deploy_application() {
