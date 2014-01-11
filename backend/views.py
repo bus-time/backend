@@ -25,8 +25,8 @@ def database_info(schema_version):
     return HttpUtils.build_database_info_response(database)
 
 
-@app.route('/databases/<int:schema_version>/content')
-def database_content(schema_version):
+@app.route('/databases/<int:schema_version>/contents')
+def database_contents(schema_version):
     database = find_database(schema_version)
     return HttpUtils.build_database_contents_response(database)
 
