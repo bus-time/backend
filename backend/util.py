@@ -2,9 +2,9 @@
 
 
 from __future__ import absolute_import, unicode_literals
-import os
 import ConfigParser
 import collections
+import os
 
 
 class Config(object):
@@ -21,6 +21,7 @@ class Config(object):
     @classmethod
     def get_config_value(cls, config_key):
         parser = cls.get_config_parser()
+
         if not parser.has_section(config_key.section):
             parser.add_section(config_key.section)
 
