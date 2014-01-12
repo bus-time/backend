@@ -73,7 +73,7 @@ You will need Heroku account and Heroku Toolbelt set up to work with your accoun
 
 ## Deploying Bus Time Database Version
 
-You will need SQLite 3.8.+, SSH, Python 2.7.+ and PIP installed.
+You will need SQLite 3.7.11+, SSH, Python 2.7.+ and PIP installed.
 
 1. Generate RSA key pair that will be used for deploy data signing.
 
