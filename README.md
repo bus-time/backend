@@ -47,7 +47,7 @@ You will need Heroku account and Heroku Toolbelt set up to work with your accoun
 1. Create Heroku application.
 
   ```
-  $ heroku apps:create <app-name>
+  $ heroku apps:create --region eu --app <app-name>
   ```
 
 2. Add PostgreSQL 9.+ addon to the application.
