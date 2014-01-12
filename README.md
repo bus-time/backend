@@ -68,7 +68,7 @@ You will need Heroku account and Heroku Toolbelt set up to work with your accoun
 4. Push the repository to Heroku via a convenience script.
 
   ```
-  $ sh push-to-heroku.sh
+  $ sh deploy-heroku.sh
   ```
 
 ## Deploying Bus Time Database Version
@@ -95,8 +95,8 @@ You will need SQLite 3.8.+, SSH, Python 2.7.+ and PIP installed.
 
 3. Create configuration file.
   ```
-  $ cp config/deploy-bus-time-db.ini.template config/deploy-bus-time-db.ini
-  $ vi config/deploy-bus-time-db.ini
+  $ cp config/deploy-database.ini.template config/deploy-database.ini
+  $ vi config/deploy-database.ini
   ```
 
 4. Install required Python packages.
@@ -108,5 +108,5 @@ You will need SQLite 3.8.+, SSH, Python 2.7.+ and PIP installed.
 5. Deploy latest version available in Bus Time Database repo.
 
   ```
-  $ python deploy-bus-time-db.py
+  $ python deploy-database.py
   ```

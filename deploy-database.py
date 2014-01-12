@@ -22,7 +22,7 @@ class Config(object):
     ConfigKey = collections.namedtuple('ConfigKey', ['section', 'option'])
 
     CONFIG_FILE_DIR = 'config'
-    CONFIG_FILE_NAME = 'deploy-bus-time-db.ini'
+    CONFIG_FILE_NAME = 'deploy-database.ini'
     CONFIG_SECTION_NAME = 'general'
 
     VALUE_REPO_OWNER = ConfigKey('repo', 'owner')
