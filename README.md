@@ -90,7 +90,7 @@ You will need SQLite 3.7.11+, SSH, Python 2.7.+ and PIP installed.
   $ cp <public-rsa-key> config
   $ git add .
   $ git commit
-  $ sh push-to-heroku.sh
+  $ sh deploy-heroku.sh
   ```
 
 3. Create configuration file.
