@@ -152,5 +152,6 @@ Content-Type: application/octet-stream
 Content-Length: 37412
 Content-Disposition: attachment; filename=bus-time.db
 Content-Encoding: gzip
+X-Content-SHA256: a1e02fa6e5416c12605f923b38d018f725016cd9781951b4deea3301f7ef7eb2
 Vary: Accept-Encoding
 ```
