@@ -8,7 +8,7 @@ import itertools
 import os
 import collections
 
-from Crypto.Hash import SHA512
+from Crypto.Hash import SHA512, SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
 from flask import jsonify, make_response, request
@@ -55,6 +55,10 @@ def database_deploy():
 
 
 class HttpUtils(object):
+    HEADER_CONTENT_TYPE = 'Content-Type'
+    HEADER_CONTENT_DISPOSITION = 'Content-Disposition'
+    HEADER_X_CONTENT_SHA256 = 'X-Content-SHA256'
+
     CONTENT_TYPE_OCTET_STREAM = 'application/octet-stream'
     CONTENT_DISPOSITION_DB_FILE = 'attachment; filename=bus-time.db'
 
@@ -71,15 +75,25 @@ class HttpUtils(object):
     def build_database_contents_response(cls, database):
         response = make_response(database.contents)
 
-        headers = {
-            'Content-Type': cls.CONTENT_TYPE_OCTET_STREAM,
-            'Content-Disposition': cls.CONTENT_DISPOSITION_DB_FILE
-        }
-
+        headers = cls.build_extra_contents_headers(database.contents)
         for name, value in headers.iteritems():
             response.headers[name] = value
 
         return response
+
+    @classmethod
+    def build_extra_contents_headers(cls, contents):
+        return {
+            cls.HEADER_CONTENT_TYPE: cls.CONTENT_TYPE_OCTET_STREAM,
+            cls.HEADER_CONTENT_DISPOSITION: cls.CONTENT_DISPOSITION_DB_FILE,
+            cls.HEADER_X_CONTENT_SHA256: cls.calc_contents_sha256(contents)
+        }
+
+    @classmethod
+    def calc_contents_sha256(cls, contents):
+        sha = SHA256.new()
+        sha.update(contents)
+        return sha.hexdigest()
 
     @classmethod
     def make_error_response(cls, error, code):
