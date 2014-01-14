@@ -2,31 +2,36 @@
 
 
 from __future__ import absolute_import, unicode_literals
-import os
 import ConfigParser
+import collections
+import os
 
 
 class Config(object):
-    CONFIG_FILE_NAME = 'backend.ini'
-    CONFIG_SECTION_NAME = 'general'
+    ConfigKey = collections.namedtuple('ConfigKey', ['section', 'option'])
 
-    VALUE_DB_URL = 'db-url'
-    VALUE_DB_REPO_DOWNLOAD_DIR = 'db-repo-download-dir'
+    CONFIG_FILE_DIR = '../config'
+    CONFIG_FILE_NAME = 'backend.ini'
+
+    VALUE_DB_URL = ConfigKey('db', 'url')
 
     ENV_HEROKU_DATABASE_URL = 'DATABASE_URL'
     HEROKU_TMP_DIR = '/tmp'
 
     @classmethod
-    def get_config_value(cls, value_name):
-        return cls.get_config_parser().get(cls.CONFIG_SECTION_NAME, value_name)
+    def get_config_value(cls, config_key):
+        parser = cls.get_config_parser()
+
+        if not parser.has_section(config_key.section):
+            parser.add_section(config_key.section)
+
+        return parser.get(config_key.section, config_key.option)
 
     @classmethod
     def get_config_parser(cls):
-        config = ConfigParser.SafeConfigParser(defaults=cls.get_defaults())
-        config.read(cls.get_config_file_path())
-        if not config.has_section(cls.CONFIG_SECTION_NAME):
-            config.add_section(cls.CONFIG_SECTION_NAME)
-        return config
+        parser = ConfigParser.SafeConfigParser(defaults=cls.get_defaults())
+        parser.read(cls.get_config_file_path())
+        return parser
 
     @classmethod
     def get_defaults(cls):
@@ -42,12 +47,22 @@ class Config(object):
     @classmethod
     def get_heroku_defaults(cls):
         return {
-            cls.VALUE_DB_URL: os.environ[cls.ENV_HEROKU_DATABASE_URL],
-            cls.VALUE_DB_REPO_DOWNLOAD_DIR: cls.HEROKU_TMP_DIR
+            cls.VALUE_DB_URL.option: os.environ[cls.ENV_HEROKU_DATABASE_URL],
         }
 
     @classmethod
     def get_config_file_path(cls):
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-        dir = os.path.abspath(os.path.join(script_dir, '..'))
-        return os.path.join(dir, cls.CONFIG_FILE_NAME)
+        return os.path.join(cls.get_config_dir_path(), cls.CONFIG_FILE_NAME)
+
+    @classmethod
+    def get_config_dir_path(cls):
+        relative_path = os.path.join(cls.get_script_dir(), cls.CONFIG_FILE_DIR)
+        return os.path.abspath(relative_path)
+
+    @classmethod
+    def get_script_dir(cls):
+        return os.path.dirname(os.path.realpath(__file__))
+
+    @classmethod
+    def get_deployment_key_dir(cls):
+        return cls.get_config_dir_path()
