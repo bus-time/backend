@@ -75,7 +75,9 @@ class HttpUtils(object):
             'Content-Type': cls.CONTENT_TYPE_OCTET_STREAM,
             'Content-Disposition': cls.CONTENT_DISPOSITION_DB_FILE
         }
-        response.headers.extend(headers)
+
+        for name, value in headers.iteritems():
+            response.headers[name] = value
 
         return response
 
