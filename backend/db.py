@@ -30,3 +30,15 @@ class Database(Base):
         self.schema_version = schema_version
         self.version = version
         self.contents = contents
+
+    @classmethod
+    def find_by_schema_version(cls, schema_version):
+        return (Database.query
+                .filter(Database.schema_version == schema_version)
+                .first())
+
+    @classmethod
+    def find_latest(cls):
+        return (Database.query
+                .order_by(Database.schema_version.desc())
+                .first())

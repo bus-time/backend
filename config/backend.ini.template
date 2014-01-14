@@ -1,0 +1,2 @@
+[db]
+url = postgresql://username:password@host/dbname

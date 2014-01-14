@@ -1,5 +1,0 @@
-#!/bin/sh
-
-echo "Running database migrations"
-source $OPENSHIFT_REPO_DIR/.openshift/action_hooks/util/add_pg_libs_to_library_path.sh
-alembic -c ${OPENSHIFT_REPO_DIR}/wsgi/alembic.ini upgrade head

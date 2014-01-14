@@ -4,9 +4,8 @@
 
 from __future__ import absolute_import, unicode_literals
 
+from backend.application import main
+
 
 if __name__ == '__main__':
-    from backend.application import main
     main()
-else:
-    from backend.server import app as application
