@@ -3,6 +3,7 @@
 
 
 from __future__ import absolute_import, unicode_literals, print_function
+from argparse import ArgumentParser
 from getpass import getpass
 from zipfile import ZipFile
 import ConfigParser
@@ -21,8 +22,8 @@ import requests
 class Config(object):
     ConfigKey = collections.namedtuple('ConfigKey', ['section', 'option'])
 
+    DEFAULT_CONFIG_FILE_NAME = 'deploy-database.ini'
     CONFIG_FILE_DIR = 'config'
-    CONFIG_FILE_NAME = 'deploy-database.ini'
     CONFIG_SECTION_NAME = 'general'
 
     VALUE_REPO_OWNER = ConfigKey('repo', 'owner')
@@ -35,6 +36,8 @@ class Config(object):
 
     VALUE_DEPLOY_URL = ConfigKey('deploy', 'url')
     VALUE_DEPLOY_SIGNATURE_KEY_FILE = ConfigKey('deploy', 'signature-key-file')
+
+    config_file_name = DEFAULT_CONFIG_FILE_NAME
 
     @classmethod
     def get_config_value(cls, config_key):
@@ -53,7 +56,7 @@ class Config(object):
 
     @classmethod
     def get_config_file_path(cls):
-        return os.path.join(cls.get_config_dir_path(), cls.CONFIG_FILE_NAME)
+        return os.path.join(cls.get_config_dir_path(), cls.config_file_name)
 
     @classmethod
     def get_config_dir_path(cls):
@@ -304,12 +307,27 @@ class DbFileMaker(object):
 
 
 def main():
+    Config.config_file_name = parse_args().config_file
+
     key_file = Config.get_config_value(Config.VALUE_DEPLOY_SIGNATURE_KEY_FILE)
 
     try:
         VersionDeployer(key_file).deploy_version()
     except DbDeploymentError as e:
         print(e.reason)
+
+
+def parse_args():
+    parser = ArgumentParser()
+
+    parser.add_argument(
+        '-c', '--config-file',
+        action='store',
+        default='deploy-database.ini',
+        help='config file name relative to “config” directory'
+    )
+
+    return parser.parse_args()
 
 
 if __name__ == '__main__':

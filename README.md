@@ -32,6 +32,7 @@ You will need PostgreSQL 9.+, Python 2.7.+ and PIP installed.
   ```
 
 5. Run server.
+
   ```
   $ python application.py
   ```
@@ -68,8 +69,11 @@ You will need Heroku account and Heroku Toolbelt set up to work with your accoun
 4. Push the repository to Heroku via a convenience script.
 
   ```
-  $ sh deploy-heroku.sh
+  $ python deploy-heroku.py
   ```
+
+  By default remote `heroku` is used, but you can specify arbitrary
+  remote with `--remote <remote>` argument of the script.
 
 ## Deploying Bus Time Database Version
 
@@ -90,7 +94,7 @@ You will need SQLite 3.7.11+, SSH, Python 2.7.+ and PIP installed.
   $ cp <public-rsa-key> config
   $ git add .
   $ git commit
-  $ sh deploy-heroku.sh
+  $ python deploy-heroku.py
   ```
 
 3. Create configuration file.
@@ -110,6 +114,10 @@ You will need SQLite 3.7.11+, SSH, Python 2.7.+ and PIP installed.
   ```
   $ python deploy-database.py
   ```
+
+  By default configuration file `config/deploy-database.ini` is used,
+  but you can specify arbitrary file with `--config-file <file>` argument
+  of the script; `<file>` should reside in `config` directory.
 
 ## Usage
 
