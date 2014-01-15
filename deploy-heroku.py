@@ -9,7 +9,7 @@ import subprocess
 
 def main():
     args = parse_args()
-    Deployer(args.force).deploy()
+    Deployer(args.force, args.remote).deploy()
 
 
 def parse_args():
@@ -20,13 +20,20 @@ def parse_args():
         action='store_true',
         help='use “git push --force” instead of just ”git push”'
     )
+    parser.add_argument(
+        '-r', '--remote',
+        action='store',
+        default='heroku',
+        help='name of Heroku remote to use as the deploy target'
+    )
 
     return parser.parse_args()
 
 
 class Deployer(object):
-    def __init__(self, force):
+    def __init__(self, force, remote):
         self.force = force
+        self.remote = remote
 
     def deploy(self):
         self.stop_web()
@@ -34,28 +41,38 @@ class Deployer(object):
         self.start_web()
 
     def stop_web(self):
-        subprocess.check_call(['heroku', 'maintenance:on'])
+        self.heroku_check_call(['maintenance:on'])
         if self.have_running_dynos():
-            subprocess.check_call(['heroku', 'ps:scale', 'web=0'])
+            self.heroku_check_call(['ps:scale', 'web=0'])
+
+    def heroku_check_call(self, args):
+        return subprocess.check_call(self.build_heroku_command(args))
+
+    def build_heroku_command(self, args):
+        return ['heroku'] + args + ['--remote', self.remote]
 
     def have_running_dynos(self):
-        return subprocess.check_output(['heroku', 'ps']) != ''
+        return self.heroku_check_output(['ps']) != ''
 
-    def start_web(self):
-        subprocess.check_call(['heroku', 'ps:scale', 'web=0'])
-        subprocess.check_call(['heroku', 'maintenance:off'])
+    def heroku_check_output(self, args):
+        return subprocess.check_output(self.build_heroku_command(args))
 
     def deploy_application(self):
-        command = ['git', 'push', 'heroku', 'HEAD:master']
+        subprocess.check_call(self.build_push_command())
+        self.heroku_check_call(
+            ['run', 'alembic --config config/alembic.ini upgrade head']
+        )
+
+    def build_push_command(self):
+        command = ['git', 'push', self.remote, 'HEAD:master']
         if self.force:
             command.append('--force')
 
-        subprocess.check_call(command)
+        return command
 
-        subprocess.check_call(
-            ['heroku', 'run',
-             'alembic --config config/alembic.ini upgrade head']
-        )
+    def start_web(self):
+        self.heroku_check_call(['ps:scale', 'web=0'])
+        self.heroku_check_call(['maintenance:off'])
 
 
 if __name__ == '__main__':
