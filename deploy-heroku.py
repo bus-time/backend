@@ -71,7 +71,7 @@ class Deployer(object):
         return command
 
     def start_web(self):
-        self.heroku_check_call(['ps:scale', 'web=0'])
+        self.heroku_check_call(['ps:scale', 'web=1'])
         self.heroku_check_call(['maintenance:off'])
 
 
