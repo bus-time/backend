@@ -22,7 +22,7 @@ You will need PostgreSQL 9.+, Python 2.7.+ and PIP installed.
 3. Install required Python packages.
 
   ```
-  $ pip install --requirement requirements.txt --no-deps
+  $ pip install --requirement requirements/backend.txt
   ```
 
 4. Update database schema.
@@ -106,7 +106,7 @@ You will need SQLite 3.7.11+, SSH, Python 2.7.+ and PIP installed.
 4. Install required Python packages.
 
   ```
-  $ pip install --requirement requirements.txt --no-deps
+  $ pip install --requirement requirements/deploy-database.txt
   ```
 
 5. Deploy latest version available in Bus Time Database repo.
