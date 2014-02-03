@@ -33,7 +33,6 @@ class Config(object):
 
     VALUE_BUILD_MAKE_TARGET = ConfigKey('build', 'make-target')
     VALUE_BUILD_MADE_FILE_NAME = ConfigKey('build', 'made-file-name')
-    VALUE_BUILD_VERSION_TAG_PREFIX = ConfigKey('build', 'version-tag-prefix')
 
     VALUE_DEPLOY_URL = ConfigKey('deploy', 'url')
     VALUE_DEPLOY_SIGNATURE_KEY_FILE = ConfigKey('deploy', 'signature-key-file')
