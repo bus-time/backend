@@ -18,6 +18,7 @@ import collections
 import github3
 import io
 import requests
+import shutil
 
 
 class Config(object):
@@ -101,6 +102,9 @@ class VersionDeployer(object):
     FORM_CONTENTS_KEY = 'contents'
     FORM_VERSION_KEY = 'version'
     FORM_SCHEMA_VERSION_KEY = 'schema-version'
+    FORM_IS_MIGRATION_UPDATE_KEY = 'is-migration-update'
+    FORM_VALUE_TRUE = 'true'
+    FORM_VALUE_FALSE = 'false'
     FORM_SIGNATURE_SUFFIX = '-signature'
 
     def __init__(self, key_file):
@@ -110,26 +114,43 @@ class VersionDeployer(object):
         return RSA.importKey(open(key_file, 'rb').read())
 
     def deploy_version(self):
-        schema_version, commit_sha, content = DbFileMaker().make_db_file_info()
-        self.deploy_database(schema_version, commit_sha, content)
+        with DbFileMaker() as maker:
+            latest_version, migrated_versions = maker.make_db_file_infos()
+            self.deploy_database(latest_version, False)
+            for migrated_version in migrated_versions:
+                self.deploy_database(migrated_version, True)
 
-    @describe(start='Deploying just built database file...', done='done.')
-    def deploy_database(self, schema_version, commit_sha, contents):
+    def deploy_database(self, file_info, is_migration_update):
         deploy_url = Config.get_config_value(Config.VALUE_DEPLOY_URL)
-        files = self.build_files_dict(schema_version, commit_sha, contents)
+        files = self.build_files_dict(file_info.schema_version,
+                                      file_info.version,
+                                      self.read_file(file_info.file_path),
+                                      is_migration_update)
 
+        self.describe_database_deployment(file_info)
         response = requests.post(deploy_url, files=files)
 
         if not response.ok:
             raise DbDeploymentError(self.build_error_text(response))
 
-    def build_files_dict(self, schema_version, commit_sha, contents):
+    def read_file(self, file_path):
+        with open(file_path, 'rb') as f:
+            return f.read()
+
+    def describe_database_deployment(self, file_info):
+        message = 'Deploying database file of schema version “{0}”'
+        print(message.format(file_info.schema_version))
+
+    def build_files_dict(self, schema_version, commit_sha, contents,
+                         is_migration_update):
         files = {
             self.FORM_CONTENTS_KEY: contents,
             self.FORM_SCHEMA_VERSION_KEY: unicode(schema_version).encode(
                 self.FORM_STRING_DATA_ENCODING),
             self.FORM_VERSION_KEY: commit_sha.encode(
-                self.FORM_STRING_DATA_ENCODING)
+                self.FORM_STRING_DATA_ENCODING),
+            self.FORM_IS_MIGRATION_UPDATE_KEY: self.bool_to_form_value(
+                is_migration_update)
         }
 
         signed_files = dict()
@@ -138,6 +159,12 @@ class VersionDeployer(object):
             self.append_file_to_dict(signed_files, dict_key, data)
 
         return signed_files
+
+    def bool_to_form_value(self, value):
+        if value:
+            return self.FORM_VALUE_TRUE
+        else:
+            return self.FORM_VALUE_FALSE
 
     def append_file_to_dict(self, dict, dict_key, data):
         dict_signature_key = '{}{}'.format(dict_key, self.FORM_SIGNATURE_SUFFIX)
@@ -157,26 +184,49 @@ class VersionDeployer(object):
                                         response.text)
 
 
+DbFileInfo = collections.namedtuple('DbFileInfo',
+                                    ['schema_version', 'version', 'file_path'])
+
+
 class DbFileMaker(object):
     ARCHIVE_FILE_NAME = 'archive.zip'
     ARCHIVE_FORMAT = 'zipball'
     EXTRACTED_ARCHIVE_DIR = 'archive'
+    MIGRATION_DIR = 'migrations'
     BRANCH_HEAD_REF_FORMAT = 'heads/{}'
+    VERSION_FILE_FORMAT = '{}.db'
+    MIGRATION_SCRIPT_FORMAT = '{0:02d}-to-{1:02d}.sql'
     SCHEMA_VERSION_FILE_NAME = 'schema-version.txt'
     ENCODING = 'utf8'
 
     MIN_SCHEMA_VERSION = 1
     MAX_SCHEMA_VERSION = 2 ** 31 - 1
 
-    def make_db_file_info(self):
+    def __init__(self):
+        self.download_dir = None
+
+    def __enter__(self):
+        self.download_dir = tempfile.mkdtemp()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.cleanup()
+
+    def cleanup(self):
+        subprocess.check_call(['rm', '-rf', self.download_dir])
+
+    def make_db_file_infos(self):
         repo = self.connect_to_repo()
+        head_sha = self.get_head_sha(repo)
 
-        head_sha, branch_name = self.get_head_sha_info(repo)
-        self.describe_head_sha(head_sha, branch_name)
+        self.download_repo(repo, head_sha)
 
-        schema_version, contents = self.build_database_contents(repo, head_sha)
+        latest_version_info = self.build_latest_schema_file(head_sha)
+        migrated_version_infos = self.build_migrated_schema_files(
+            head_sha, latest_version_info.schema_version
+        )
 
-        return schema_version, head_sha, contents
+        return latest_version_info, migrated_version_infos
 
     def connect_to_repo(self):
         username, password = self.get_credentials()
@@ -194,14 +244,16 @@ class DbFileMaker(object):
                                                             repo_name)
 
     @describe(start='Obtaining HEAD SHA...', done='done.')
-    def get_head_sha_info(self, repo):
+    def get_head_sha(self, repo):
         branch_name = Config.get_config_value(Config.VALUE_REPO_BRANCH)
         head = repo.ref(self.BRANCH_HEAD_REF_FORMAT.format(branch_name))
 
         if not head:
             raise DbDeploymentError(self.make_no_head_message(branch_name))
 
-        return head.object.sha, branch_name
+        self.describe_head_sha(head.object.sha, branch_name)
+
+        return head.object.sha
 
     def make_no_head_message(self, branch_name):
         message = ('No “{}” HEAD found. It seems the repo has no commits. ' +
@@ -211,42 +263,33 @@ class DbFileMaker(object):
     def describe_head_sha(self, head_sha, branch_name):
         print("Branch “{}” HEAD is “{}”.".format(branch_name, head_sha))
 
-    @describe(start='Building database contents...', done='done.')
-    def build_database_contents(self, repo, commit):
-        download_dir = tempfile.mkdtemp()
-
-        try:
-            self.download_dir(repo, commit, download_dir)
-            repo_dir = self.get_repo_dir(download_dir)
-
-            schema_version = self.read_schema_version(repo_dir)
-            database_file = self.make_database_file(repo_dir)
-
-            with open(database_file, 'rb') as f:
-                return schema_version, f.read()
-        finally:
-            self.cleanup(download_dir)
-
-    def download_dir(self, repo, commit, download_dir):
-        archive_file = self.get_archive_file_name(download_dir)
+    def download_repo(self, repo, commit):
+        archive_file = self.get_archive_file_path(self.download_dir)
 
         if not repo.archive(self.ARCHIVE_FORMAT, path=archive_file, ref=commit):
             raise RuntimeError('Error downloading the archive')
 
-        ZipFile(archive_file).extractall(self.get_extracted_dir(download_dir))
+        ZipFile(archive_file).extractall(self.get_extracted_dir())
 
-    def get_archive_file_name(self, download_dir):
+    def get_archive_file_path(self, download_dir):
         return os.path.join(download_dir, self.ARCHIVE_FILE_NAME)
 
-    def get_extracted_dir(self, download_dir):
-        return os.path.join(download_dir, self.EXTRACTED_ARCHIVE_DIR)
+    def get_extracted_dir(self):
+        return os.path.join(self.download_dir, self.EXTRACTED_ARCHIVE_DIR)
 
-    def get_repo_dir(self, download_dir):
-        extracted_dir = self.get_extracted_dir(download_dir)
-        return os.path.join(extracted_dir, os.listdir(extracted_dir)[0])
+    def build_latest_schema_file(self, head_sha):
+        latest_schema_version = self.read_schema_version()
+        database_file = self.make_database_file()
 
-    def read_schema_version(self, repo_dir):
-        schema_version_string = self.read_schema_version_string(repo_dir)
+        latest_schema_file = self.get_version_file_path(latest_schema_version)
+        shutil.move(database_file, latest_schema_file)
+
+        return DbFileInfo(schema_version=latest_schema_version,
+                          version=head_sha,
+                          file_path=latest_schema_file)
+
+    def read_schema_version(self):
+        schema_version_string = self.read_schema_version_string()
 
         try:
             schema_version = self.get_schema_version(schema_version_string)
@@ -257,8 +300,9 @@ class DbFileMaker(object):
 
         return schema_version
 
-    def read_schema_version_string(self, repo_dir):
-        file_path = os.path.join(repo_dir, self.SCHEMA_VERSION_FILE_NAME)
+    def read_schema_version_string(self):
+        file_path = os.path.join(self.get_repo_dir(),
+                                 self.SCHEMA_VERSION_FILE_NAME)
         with io.open(file_path, 'r', encoding=self.ENCODING) as f:
             return '\n'.join(f.readlines()).strip()
 
@@ -273,16 +317,84 @@ class DbFileMaker(object):
         return (self.MIN_SCHEMA_VERSION <= schema_version <=
                 self.MAX_SCHEMA_VERSION)
 
-    def make_database_file(self, repo_dir):
+    def make_database_file(self):
         make_target = Config.get_config_value(Config.VALUE_BUILD_MAKE_TARGET)
         db_file_name = Config.get_config_value(
             Config.VALUE_BUILD_MADE_FILE_NAME)
 
-        subprocess.check_call(['make', make_target, '--directory', repo_dir])
-        return os.path.join(repo_dir, db_file_name)
+        subprocess.check_call(['make', make_target,
+                               '--directory', self.get_repo_dir()])
+        return os.path.join(self.get_repo_dir(), db_file_name)
 
-    def cleanup(self, download_dir):
-        subprocess.check_call(['rm', '-rf', download_dir])
+    def get_repo_dir(self):
+        extracted_dir = self.get_extracted_dir()
+        return os.path.join(extracted_dir, os.listdir(extracted_dir)[0])
+
+    def get_version_file_path(self, schema_version):
+        return os.path.join(
+            self.get_migration_dir(),
+            self.VERSION_FILE_FORMAT.format(schema_version)
+        )
+
+    def get_migration_dir(self):
+        return os.path.join(self.get_repo_dir(), self.MIGRATION_DIR)
+
+    def build_migrated_schema_files(self, head_sha, latest_schema_version):
+        migrated_file_infos = []
+
+        schema_version = latest_schema_version - 1
+        while self.can_migrate_database(schema_version):
+            self.migrate_database(schema_version)
+
+            migrated_file_infos.append(
+                DbFileInfo(
+                    schema_version=schema_version,
+                    version=head_sha,
+                    file_path=self.get_version_file_path(schema_version)
+                )
+            )
+
+            schema_version -= 1
+
+        return migrated_file_infos
+
+    def can_migrate_database(self, target_version):
+        if target_version < self.MIN_SCHEMA_VERSION:
+            return False
+
+        if not os.path.exists(self.get_migration_script_path(target_version)):
+            return False
+
+        return True
+
+    def get_migration_script_path(self, target_version):
+        migration_script_name = self.MIGRATION_SCRIPT_FORMAT.format(
+            target_version + 1, target_version
+        )
+        return os.path.join(self.get_migration_dir(),
+                            migration_script_name)
+
+    def migrate_database(self, target_version):
+        self.describe_database_migration(target_version)
+
+        original_dir = os.getcwd()
+        os.chdir(self.get_migration_dir())
+
+        try:
+            self.run_migration_script(target_version)
+        finally:
+            os.chdir(original_dir)
+
+    def run_migration_script(self, target_version):
+        with open(self.get_migration_script_path(target_version), 'rb') as f:
+            subprocess.check_call(
+                ['sqlite3', self.get_version_file_path(target_version)],
+                stdin=f
+            )
+
+    def describe_database_migration(self, target_version):
+        message = 'Running migration script “{0}”...'
+        print(message.format(self.get_migration_script_path(target_version)))
 
 
 def main():
