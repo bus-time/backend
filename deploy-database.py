@@ -16,6 +16,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
 import collections
 import github3
+import io
 import requests
 
 
@@ -32,7 +33,6 @@ class Config(object):
 
     VALUE_BUILD_MAKE_TARGET = ConfigKey('build', 'make-target')
     VALUE_BUILD_MADE_FILE_NAME = ConfigKey('build', 'made-file-name')
-    VALUE_BUILD_VERSION_TAG_PREFIX = ConfigKey('build', 'version-tag-prefix')
 
     VALUE_DEPLOY_URL = ConfigKey('deploy', 'url')
     VALUE_DEPLOY_SIGNATURE_KEY_FILE = ConfigKey('deploy', 'signature-key-file')
@@ -162,18 +162,21 @@ class DbFileMaker(object):
     ARCHIVE_FORMAT = 'zipball'
     EXTRACTED_ARCHIVE_DIR = 'archive'
     BRANCH_HEAD_REF_FORMAT = 'heads/{}'
+    SCHEMA_VERSION_FILE_NAME = 'schema-version.txt'
+    ENCODING = 'utf8'
+
+    MIN_SCHEMA_VERSION = 1
+    MAX_SCHEMA_VERSION = 2 ** 31 - 1
 
     def make_db_file_info(self):
         repo = self.connect_to_repo()
 
-        latest_schema_commit_info = self.get_latest_schema_commit_info(repo)
-        if not latest_schema_commit_info:
-            return None
+        head_sha, branch_name = self.get_head_sha_info(repo)
+        self.describe_head_sha(head_sha, branch_name)
 
-        schema_version, schema_commit_sha = latest_schema_commit_info
-        contents = self.build_database_contents(repo, schema_commit_sha)
+        schema_version, contents = self.build_database_contents(repo, head_sha)
 
-        return schema_version, schema_commit_sha, contents
+        return schema_version, head_sha, contents
 
     def connect_to_repo(self):
         username, password = self.get_credentials()
@@ -189,55 +192,6 @@ class DbFileMaker(object):
 
         return github3.login(username, password).repository(repo_owner,
                                                             repo_name)
-
-    def get_latest_schema_commit_info(self, repo):
-        schema_version, commit_sha = self.get_latest_schema_tag_info(repo)
-        self.describe_latest_schema_tag_info(schema_version, commit_sha)
-
-        head_sha, branch_name = self.get_head_sha_info(repo)
-        self.describe_head_sha(head_sha, branch_name)
-
-        if commit_sha != head_sha:
-            message = self.make_mismatching_sha_message(branch_name)
-            raise DbDeploymentError(message)
-
-        return schema_version, head_sha
-
-    @describe(start='Obtaining latest tag with schema info...', done='done.')
-    def get_latest_schema_tag_info(self, repo):
-        tags = ((self.extract_schema_version(t), t.commit['sha'])
-                for t in repo.iter_tags()
-                if self.is_schema_version_tag(t))
-        tags = sorted(tags, key=lambda (v, s): v, reverse=True)
-
-        if len(tags) > 0:
-            return tags[0]
-        else:
-            raise DbDeploymentError('No schema version tags found. ' +
-                                    'Nothing to do.')
-
-    def extract_schema_version(self, tag):
-        name_prefix = Config.get_config_value(
-            Config.VALUE_BUILD_VERSION_TAG_PREFIX)
-        return int(tag.name[len(name_prefix):])
-
-    def is_schema_version_tag(self, tag):
-        name_prefix = Config.get_config_value(
-            Config.VALUE_BUILD_VERSION_TAG_PREFIX)
-        if not tag.name.startswith(name_prefix):
-            return False
-
-        try:
-            self.extract_schema_version(tag)
-        except TypeError:
-            return False
-
-        return True
-
-    def describe_latest_schema_tag_info(self, schema_version, commit_sha):
-        message = ("Latest schema version tag is of version {} and " +
-                   "references commit “{}”.")
-        print(message.format(schema_version, commit_sha))
 
     @describe(start='Obtaining HEAD SHA...', done='done.')
     def get_head_sha_info(self, repo):
@@ -257,21 +211,19 @@ class DbFileMaker(object):
     def describe_head_sha(self, head_sha, branch_name):
         print("Branch “{}” HEAD is “{}”.".format(branch_name, head_sha))
 
-    def make_mismatching_sha_message(self, branch_name):
-        message = ('Latest schema version tag does not reference “{}” HEAD.' +
-                   'Nothing to do.')
-        return message.format(branch_name)
-
     @describe(start='Building database contents...', done='done.')
     def build_database_contents(self, repo, commit):
         download_dir = tempfile.mkdtemp()
 
         try:
             self.download_dir(repo, commit, download_dir)
-            database_file = self.make_database_file(download_dir)
+            repo_dir = self.get_repo_dir(download_dir)
+
+            schema_version = self.read_schema_version(repo_dir)
+            database_file = self.make_database_file(repo_dir)
 
             with open(database_file, 'rb') as f:
-                return f.read()
+                return schema_version, f.read()
         finally:
             self.cleanup(download_dir)
 
@@ -289,18 +241,45 @@ class DbFileMaker(object):
     def get_extracted_dir(self, download_dir):
         return os.path.join(download_dir, self.EXTRACTED_ARCHIVE_DIR)
 
-    def make_database_file(self, download_dir):
-        make_dir = self.get_make_dir(download_dir)
+    def get_repo_dir(self, download_dir):
+        extracted_dir = self.get_extracted_dir(download_dir)
+        return os.path.join(extracted_dir, os.listdir(extracted_dir)[0])
+
+    def read_schema_version(self, repo_dir):
+        schema_version_string = self.read_schema_version_string(repo_dir)
+
+        try:
+            schema_version = self.get_schema_version(schema_version_string)
+        except ValueError:
+            message = ('File “schema-version.txt” contains invalid version ' +
+                       'string: “{}”.')
+            raise ValueError(message.format(schema_version_string))
+
+        return schema_version
+
+    def read_schema_version_string(self, repo_dir):
+        file_path = os.path.join(repo_dir, self.SCHEMA_VERSION_FILE_NAME)
+        with io.open(file_path, 'r', encoding=self.ENCODING) as f:
+            return '\n'.join(f.readlines()).strip()
+
+    def get_schema_version(self, schema_version_string):
+        schema_version = int(schema_version_string)
+        if not self.is_valid_schema_version(schema_version):
+            raise ValueError()
+
+        return schema_version
+
+    def is_valid_schema_version(self, schema_version):
+        return (self.MIN_SCHEMA_VERSION <= schema_version <=
+                self.MAX_SCHEMA_VERSION)
+
+    def make_database_file(self, repo_dir):
         make_target = Config.get_config_value(Config.VALUE_BUILD_MAKE_TARGET)
         db_file_name = Config.get_config_value(
             Config.VALUE_BUILD_MADE_FILE_NAME)
 
-        subprocess.check_call(['make', make_target, '--directory', make_dir])
-        return os.path.join(make_dir, db_file_name)
-
-    def get_make_dir(self, download_dir):
-        extracted_dir = self.get_extracted_dir(download_dir)
-        return os.path.join(extracted_dir, os.listdir(extracted_dir)[0])
+        subprocess.check_call(['make', make_target, '--directory', repo_dir])
+        return os.path.join(repo_dir, db_file_name)
 
     def cleanup(self, download_dir):
         subprocess.check_call(['rm', '-rf', download_dir])

@@ -6,7 +6,6 @@ branch = master
 [build]
 make-target = database
 made-file-name = bustime.db
-version-tag-prefix = schema-version-
 
 [deploy]
 url = http://bustime-backend-john-doe.herokuapp.com/databases
