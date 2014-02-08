@@ -105,11 +105,14 @@ class HttpUtils(object):
 
 
 class Deployer(object):
+    FORM_STRING_DATA_ENCODING = 'utf8'
     FORM_CONTENTS_KEY = 'contents'
     FORM_VERSION_KEY = 'version'
     FORM_SCHEMA_VERSION_KEY = 'schema-version'
+    FORM_IS_MIGRATION_UPDATE_KEY = 'is-migration-update'
+    FORM_VALUE_TRUE = 'true'
+    FORM_VALUE_FALSE = 'false'
     FORM_SIGNATURE_SUFFIX = '-signature'
-    FORM_STRING_DATA_ENCODING = 'utf8'
 
     DEPLOYMENT_KEY_EXT = 'pub'
 
@@ -124,21 +127,31 @@ class Deployer(object):
     SignedFile = collections.namedtuple('SignedFile', ['data', 'signature'])
 
     def deploy_database(self, files):
-        contents, schema_version, version = self.read_deploy_data(files)
-        self.update_database(contents, schema_version, version)
+        (contents, schema_version,
+         version, override_same_version) = self.read_deploy_data(files)
+
+        self.update_database(contents, schema_version, version,
+                             override_same_version)
 
         return schema_version
 
     def read_deploy_data(self, files):
-        files = self.read_signed_files(files, (self.FORM_CONTENTS_KEY,
-                                               self.FORM_SCHEMA_VERSION_KEY,
-                                               self.FORM_VERSION_KEY))
+        files = self.read_signed_files(
+            files,
+            (self.FORM_CONTENTS_KEY,
+             self.FORM_SCHEMA_VERSION_KEY,
+             self.FORM_VERSION_KEY,
+             self.FORM_IS_MIGRATION_UPDATE_KEY)
+        )
 
         contents = files[self.FORM_CONTENTS_KEY]
         schema_version = self.read_schema_version(files)
         version = self.read_form_string_data(files, self.FORM_VERSION_KEY)
+        is_migration_update = self.read_form_bool_data(
+            files, self.FORM_IS_MIGRATION_UPDATE_KEY
+        )
 
-        return contents, schema_version, version
+        return contents, schema_version, version, is_migration_update
 
     def read_signed_files(self, files, keys):
         signed_files = {k: self.build_signed_files(files, k) for k in keys}
@@ -211,23 +224,44 @@ class Deployer(object):
     def read_form_string_data(self, files, key):
         return files[key].decode(self.FORM_STRING_DATA_ENCODING)
 
-    def update_database(self, contents, schema_version, version):
-        database = Database.find_latest()
+    def read_form_bool_data(self, files, key):
+        return self.form_value_to_bool(self.read_form_string_data(files, key))
 
-        self.check_database_conflicts(database, schema_version, version)
+    def form_value_to_bool(self, value):
+        if value == self.FORM_VALUE_TRUE:
+            return True
+        elif value == self.FORM_VALUE_FALSE:
+            return False
+        else:
+            raise ValueError(value)
 
-        if database and database.schema_version == schema_version:
-            self.delete_database(database)
+    def update_database(self, contents, schema_version, version,
+                        is_migration_update):
+        latest_database = Database.find_latest()
+        self.check_database_conflicts(latest_database, schema_version, version,
+                                      is_migration_update)
+
+        save_schema_database = Database.find_by_schema_version(schema_version)
+        if save_schema_database:
+            self.delete_database(save_schema_database)
 
         self.create_database(contents, schema_version, version)
 
         db_session.commit()
 
-    def check_database_conflicts(self, database, schema_version, version):
-        if database and database.schema_version > schema_version:
+    def check_database_conflicts(self, latest_database, schema_version, version,
+                                 is_migration_update):
+        if not latest_database:
+            return
+
+        if is_migration_update:
+            return
+
+        if latest_database.schema_version > schema_version:
             raise DeployConfictError(self.ERROR_MORE_RECENT_SCHEMA_DEPLOYED)
 
-        if database and database.version == version:
+        if (latest_database.schema_version == schema_version and
+                latest_database.version == version):
             raise DeployConfictError(self.ERROR_VERSION_ALREADY_DEPLOYED)
 
     def delete_database(self, database):
