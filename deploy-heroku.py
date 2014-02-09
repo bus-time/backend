@@ -3,7 +3,7 @@
 
 
 from __future__ import absolute_import, unicode_literals
-from argparse import ArgumentParser
+import argparse
 import subprocess
 
 
@@ -13,7 +13,7 @@ def main():
 
 
 def parse_args():
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser()
 
     parser.add_argument(
         '-f', '--force',

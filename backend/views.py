@@ -5,18 +5,17 @@ from __future__ import absolute_import, unicode_literals
 import glob
 import httplib
 import itertools
-import os
 import collections
+import os
 
 from Crypto.Hash import SHA512, SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
-from flask import jsonify, make_response, request
-from werkzeug.exceptions import abort
+import flask
+from werkzeug import exceptions as wzex
 
+from backend import db, util
 from backend.server import app
-from backend.db import Database, db_session
-from backend.util import Config
 
 
 @app.route('/databases/<int:schema_version>')
@@ -32,10 +31,10 @@ def database_contents(schema_version):
 
 
 def find_database(schema_version):
-    database = Database.find_by_schema_version(schema_version)
+    database = db.Database.find_by_schema_version(schema_version)
 
     if not database:
-        abort(httplib.NOT_FOUND)
+        wzex.abort(httplib.NOT_FOUND)
 
     return database
 
@@ -43,7 +42,7 @@ def find_database(schema_version):
 @app.route('/databases', methods=['POST'])
 def database_deploy():
     try:
-        schema_version = Deployer().deploy_database(request.files)
+        schema_version = Deployer().deploy_database(flask.request.files)
     except DeployDataError as e:
         return HttpUtils.make_error_response(e.error, httplib.BAD_REQUEST)
     except DeployConfictError as e:
@@ -69,11 +68,11 @@ class HttpUtils(object):
             'version': database.version
         }
 
-        return jsonify(version_info_dict)
+        return flask.jsonify(version_info_dict)
 
     @classmethod
     def build_database_contents_response(cls, database):
-        response = make_response(database.contents)
+        response = flask.make_response(database.contents)
 
         headers = cls.build_extra_contents_headers(database.contents)
         for name, value in headers.iteritems():
@@ -101,7 +100,7 @@ class HttpUtils(object):
             'error': error
         }
 
-        return jsonify(response), code
+        return flask.jsonify(response), code
 
 
 class Deployer(object):
@@ -189,7 +188,7 @@ class Deployer(object):
         return None
 
     def get_public_keys(self):
-        key_file_mask = os.path.join(Config.get_deployment_key_dir(),
+        key_file_mask = os.path.join(util.Config.get_deployment_key_dir(),
                                      '*.{}'.format(self.DEPLOYMENT_KEY_EXT))
         for key_file in glob.glob(key_file_mask):
             yield self.import_public_key(key_file)
@@ -237,17 +236,19 @@ class Deployer(object):
 
     def update_database(self, contents, schema_version, version,
                         is_migration_update):
-        latest_database = Database.find_latest()
+        latest_database = db.Database.find_latest()
         self.check_database_conflicts(latest_database, schema_version, version,
                                       is_migration_update)
 
-        save_schema_database = Database.find_by_schema_version(schema_version)
-        if save_schema_database:
-            self.delete_database(save_schema_database)
+        same_schema_database = db.Database.find_by_schema_version(
+            schema_version
+        )
+        if same_schema_database:
+            self.delete_database(same_schema_database)
 
         self.create_database(contents, schema_version, version)
 
-        db_session.commit()
+        db.db_session.commit()
 
     def check_database_conflicts(self, latest_database, schema_version, version,
                                  is_migration_update):
@@ -260,19 +261,22 @@ class Deployer(object):
         if latest_database.schema_version > schema_version:
             raise DeployConfictError(self.ERROR_MORE_RECENT_SCHEMA_DEPLOYED)
 
-        if (latest_database.schema_version == schema_version and
-                latest_database.version == version):
+        if self.is_same_version(latest_database, schema_version, version):
             raise DeployConfictError(self.ERROR_VERSION_ALREADY_DEPLOYED)
 
+    def is_same_version(self, latest_database, schema_version, version):
+        return (latest_database.schema_version == schema_version
+                and latest_database.version == version)
+
     def delete_database(self, database):
-        db_session.delete(database)
-        db_session.flush()
+        db.db_session.delete(database)
+        db.db_session.flush()
 
     def create_database(self, contents, schema_version, version):
-        database = Database(schema_version=schema_version,
-                            version=version,
-                            contents=contents)
-        db_session.add(database)
+        database = db.Database(schema_version=schema_version,
+                               version=version,
+                               contents=contents)
+        db.db_session.add(database)
 
 
 class DeployDataError(ValueError):

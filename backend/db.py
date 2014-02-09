@@ -3,19 +3,19 @@
 
 from __future__ import absolute_import, unicode_literals
 
-from sqlalchemy import create_engine, Integer, Column, String, Binary, \
-    UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import scoped_session, sessionmaker, deferred
+import sqlalchemy as sa
+from sqlalchemy.ext import declarative
+from sqlalchemy import orm
 
-from backend.util import Config
-
-
-engine = create_engine(Config.get_config_value(Config.VALUE_DB_URL))
-db_session = scoped_session(sessionmaker(bind=engine))
+from backend import util
 
 
-Base = declarative_base()
+engine = sa.create_engine(
+    util.Config.get_config_value(util.Config.VALUE_DB_URL)
+)
+db_session = orm.scoped_session(orm.sessionmaker(bind=engine))
+
+Base = declarative.declarative_base()
 Base.query = db_session.query_property()
 
 
@@ -23,13 +23,13 @@ class Database(Base):
     __tablename__ = 'databases'
 
     __table_args__ = (
-        UniqueConstraint('schema_version', 'version'),
+        sa.UniqueConstraint('schema_version', 'version'),
     )
 
-    id = Column(Integer, primary_key=True)
-    schema_version = Column(Integer, nullable=False)
-    version = Column(String, nullable=False)
-    contents = deferred(Column(Binary, nullable=False))
+    id = sa.Column(sa.Integer, primary_key=True)
+    schema_version = sa.Column(sa.Integer, nullable=False)
+    version = sa.Column(sa.String, nullable=False)
+    contents = orm.deferred(sa.Column(sa.Binary, nullable=False))
 
     def __init__(self, schema_version=None, version=None, contents=None):
         self.schema_version = schema_version

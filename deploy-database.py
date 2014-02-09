@@ -3,22 +3,22 @@
 
 
 from __future__ import absolute_import, unicode_literals, print_function
-from argparse import ArgumentParser
-from getpass import getpass
-from zipfile import ZipFile
+import argparse
+import getpass
+import zipfile
 import ConfigParser
 import os
 import subprocess
 import tempfile
+import collections
+import io
+import shutil
 
 from Crypto.Hash import SHA512
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_PSS
-import collections
 import github3
-import io
 import requests
-import shutil
 
 
 class Config(object):
@@ -234,7 +234,7 @@ class DbFileMaker(object):
         return self.login_to_repo(username, password)
 
     def get_credentials(self):
-        return raw_input('Username: '), getpass('Password: ')
+        return raw_input('Username: '), getpass.getpass('Password: ')
 
     @describe(start='Logging in to repo...', done='done.')
     def login_to_repo(self, username, password):
@@ -264,13 +264,14 @@ class DbFileMaker(object):
     def describe_head_sha(self, head_sha, branch_name):
         print("Branch “{}” HEAD is “{}”.".format(branch_name, head_sha))
 
+    @describe(start='Downloading repo archive...', done='done.')
     def download_repo(self, repo, commit):
         archive_file = self.get_archive_file_path(self.download_dir)
 
         if not repo.archive(self.ARCHIVE_FORMAT, path=archive_file, ref=commit):
             raise RuntimeError('Error downloading the archive')
 
-        ZipFile(archive_file).extractall(self.get_extracted_dir())
+        zipfile.ZipFile(archive_file).extractall(self.get_extracted_dir())
 
     def get_archive_file_path(self, download_dir):
         return os.path.join(download_dir, self.ARCHIVE_FILE_NAME)
@@ -411,7 +412,7 @@ def main():
 
 
 def parse_args():
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser()
 
     parser.add_argument(
         '-c', '--config-file',

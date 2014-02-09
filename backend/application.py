@@ -2,9 +2,9 @@
 
 
 from __future__ import absolute_import, unicode_literals
-from argparse import ArgumentParser
+import argparse
 
-from backend.server import app
+from backend import server
 
 
 def main():
@@ -12,7 +12,7 @@ def main():
 
 
 def parse_args():
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser()
 
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--use-reloader', action='store_true')
@@ -21,4 +21,4 @@ def parse_args():
 
 
 def run_server(args):
-    app.run(debug=args.debug, use_reloader=args.use_reloader)
+    server.app.run(debug=args.debug, use_reloader=args.use_reloader)
