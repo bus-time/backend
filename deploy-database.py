@@ -196,7 +196,8 @@ class DbFileMaker(object):
     BRANCH_HEAD_REF_FORMAT = 'heads/{}'
     VERSION_FILE_FORMAT = '{}.db'
     MIGRATION_SCRIPT_FORMAT = '{0:02d}-to-{1:02d}.sql'
-    SCHEMA_VERSION_FILE_NAME = 'schema-version.txt'
+    SCHEMA_DIR = 'schema'
+    SCHEMA_VERSION_FILE_NAME = 'version.txt'
     ENCODING = 'utf8'
 
     MIN_SCHEMA_VERSION = 1
@@ -302,6 +303,7 @@ class DbFileMaker(object):
 
     def read_schema_version_string(self):
         file_path = os.path.join(self.get_repo_dir(),
+                                 self.SCHEMA_DIR,
                                  self.SCHEMA_VERSION_FILE_NAME)
         with io.open(file_path, 'r', encoding=self.ENCODING) as f:
             return '\n'.join(f.readlines()).strip()
