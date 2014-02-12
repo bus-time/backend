@@ -91,7 +91,7 @@ class DescribeDecorator(object):
 describe = DescribeDecorator
 
 
-class DbDeploymentError(Exception):
+class DatabaseDeploymentError(Exception):
     def __init__(self, reason):
         self.reason = reason
 
@@ -113,8 +113,8 @@ class VersionDeployer(object):
         return RSA.importKey(open(key_file, 'rb').read())
 
     def deploy_version(self):
-        with DbFileMaker() as maker:
-            latest_version, migrated_versions = maker.make_db_file_infos()
+        with DatabaseFileMaker() as maker:
+            latest_version, migrated_versions = maker.make_database_file_infos()
             self.deploy_database(latest_version, False)
             for migrated_version in migrated_versions:
                 self.deploy_database(migrated_version, True)
@@ -130,7 +130,7 @@ class VersionDeployer(object):
         response = requests.post(deploy_url, files=files)
 
         if not response.ok:
-            raise DbDeploymentError(self.build_error_text(response))
+            raise DatabaseDeploymentError(self.build_error_text(response))
 
     def read_file(self, file_path):
         with open(file_path, 'rb') as f:
@@ -183,11 +183,12 @@ class VersionDeployer(object):
                                         response.text)
 
 
-DbFileInfo = collections.namedtuple('DbFileInfo',
-                                    ['schema_version', 'version', 'file_path'])
+DatabaseFileInfo = collections.namedtuple(
+    'DatabaseFileInfo', ['schema_version', 'version', 'file_path']
+)
 
 
-class DbFileMaker(object):
+class DatabaseFileMaker(object):
     ARCHIVE_FILE_NAME = 'archive.zip'
     ARCHIVE_FORMAT = 'zipball'
     EXTRACTED_ARCHIVE_DIR = 'archive'
@@ -215,7 +216,7 @@ class DbFileMaker(object):
     def cleanup(self):
         subprocess.check_call(['rm', '-rf', self.download_dir])
 
-    def make_db_file_infos(self):
+    def make_database_file_infos(self):
         repo = self.connect_to_repo()
         head_sha = self.get_head_sha(repo)
 
@@ -249,7 +250,8 @@ class DbFileMaker(object):
         head = repo.ref(self.BRANCH_HEAD_REF_FORMAT.format(branch_name))
 
         if not head:
-            raise DbDeploymentError(self.make_no_head_message(branch_name))
+            message = self.make_no_head_message(branch_name)
+            raise DatabaseDeploymentError(message)
 
         self.describe_head_sha(head.object.sha, branch_name)
 
@@ -285,9 +287,9 @@ class DbFileMaker(object):
         latest_schema_file = self.get_version_file_path(latest_schema_version)
         shutil.move(database_file, latest_schema_file)
 
-        return DbFileInfo(schema_version=latest_schema_version,
-                          version=head_sha,
-                          file_path=latest_schema_file)
+        return DatabaseFileInfo(schema_version=latest_schema_version,
+                                version=head_sha,
+                                file_path=latest_schema_file)
 
     def read_schema_version(self):
         schema_version_string = self.read_schema_version_string()
@@ -321,12 +323,12 @@ class DbFileMaker(object):
 
     def make_database_file(self):
         make_target = Config.get_config_value(Config.VALUE_BUILD_MAKE_TARGET)
-        db_file_name = Config.get_config_value(
+        database_file_name = Config.get_config_value(
             Config.VALUE_BUILD_MADE_FILE_NAME)
 
         subprocess.check_call(['make', make_target,
                                '--directory', self.get_repo_dir()])
-        return os.path.join(self.get_repo_dir(), db_file_name)
+        return os.path.join(self.get_repo_dir(), database_file_name)
 
     def get_repo_dir(self):
         extracted_dir = self.get_extracted_dir()
@@ -349,7 +351,7 @@ class DbFileMaker(object):
             self.migrate_database(schema_version)
 
             migrated_file_infos.append(
-                DbFileInfo(
+                DatabaseFileInfo(
                     schema_version=schema_version,
                     version=head_sha,
                     file_path=self.get_version_file_path(schema_version)
@@ -406,7 +408,7 @@ def main():
 
     try:
         VersionDeployer(key_file).deploy_version()
-    except DbDeploymentError as e:
+    except DatabaseDeploymentError as e:
         print(e.reason)
 
 

@@ -13,10 +13,10 @@ from backend import util
 engine = sa.create_engine(
     util.Config.get_config_value(util.Config.VALUE_DB_URL)
 )
-db_session = orm.scoped_session(orm.sessionmaker(bind=engine))
+database_session = orm.scoped_session(orm.sessionmaker(bind=engine))
 
 Base = declarative.declarative_base()
-Base.query = db_session.query_property()
+Base.query = database_session.query_property()
 
 
 class Database(Base):
