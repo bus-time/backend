@@ -281,11 +281,13 @@ class Deployer(object):
 
 class DeployDataError(ValueError):
     def __init__(self, error):
+        super(DeployDataError, self).__init__()
         self.error = error
 
 
 class DeployConfictError(ValueError):
     def __init__(self, error):
+        super(DeployConfictError, self).__init__()
         self.error = error
 
 

@@ -93,6 +93,7 @@ describe = DescribeDecorator
 
 class DatabaseDeploymentError(Exception):
     def __init__(self, reason):
+        super(DatabaseDeploymentError, self).__init__()
         self.reason = reason
 
 
@@ -165,11 +166,13 @@ class VersionDeployer(object):
         else:
             return self.FORM_VALUE_FALSE
 
-    def append_file_to_dict(self, dict, dict_key, data):
+    def append_file_to_dict(self, target_dict, dict_key, data):
         dict_signature_key = '{}{}'.format(dict_key, self.FORM_SIGNATURE_SUFFIX)
 
-        dict[dict_key] = data
-        dict[dict_signature_key] = self.make_signature(data, self.signature_key)
+        target_dict[dict_key] = data
+        target_dict[dict_signature_key] = self.make_signature(
+            data, self.signature_key
+        )
 
     def make_signature(self, data, key):
         sha = SHA512.new()
