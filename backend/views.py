@@ -248,7 +248,7 @@ class Deployer(object):
 
         self.create_database(contents, schema_version, version)
 
-        db.db_session.commit()
+        db.database_session.commit()
 
     def check_database_conflicts(self, latest_database, schema_version, version,
                                  is_migration_update):
@@ -269,23 +269,25 @@ class Deployer(object):
                 and latest_database.version == version)
 
     def delete_database(self, database):
-        db.db_session.delete(database)
-        db.db_session.flush()
+        db.database_session.delete(database)
+        db.database_session.flush()
 
     def create_database(self, contents, schema_version, version):
         database = db.Database(schema_version=schema_version,
                                version=version,
                                contents=contents)
-        db.db_session.add(database)
+        db.database_session.add(database)
 
 
 class DeployDataError(ValueError):
     def __init__(self, error):
+        super(DeployDataError, self).__init__()
         self.error = error
 
 
 class DeployConfictError(ValueError):
     def __init__(self, error):
+        super(DeployConfictError, self).__init__()
         self.error = error
 
 

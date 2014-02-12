@@ -20,4 +20,4 @@ import backend.views
 @app.teardown_appcontext
 def shutdown_session(exception=None):
     from backend import db
-    db.db_session.remove()
+    db.database_session.remove()
