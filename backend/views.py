@@ -1,11 +1,10 @@
 # coding: utf-8
 
 
-from __future__ import absolute_import, unicode_literals
 import glob
-import httplib
 import itertools
 import collections
+import http.client as http
 import os
 
 from Crypto.Hash import SHA512, SHA256
@@ -34,7 +33,7 @@ def find_database(schema_version):
     database = db.Database.find_by_schema_version(schema_version)
 
     if not database:
-        wzex.abort(httplib.NOT_FOUND)
+        wzex.abort(http.NOT_FOUND)
 
     return database
 
@@ -44,11 +43,11 @@ def database_deploy():
     try:
         schema_version = Deployer().deploy_database(flask.request.files)
     except DeployDataError as e:
-        return HttpUtils.make_error_response(e.error, httplib.BAD_REQUEST)
+        return HttpUtils.make_error_response(e.error, http.BAD_REQUEST)
     except DeployConfictError as e:
-        return HttpUtils.make_error_response(e.error, httplib.CONFLICT)
+        return HttpUtils.make_error_response(e.error, http.CONFLICT)
     except DeployAuthenticationError as e:
-        return HttpUtils.make_error_response(e.error, httplib.UNAUTHORIZED)
+        return HttpUtils.make_error_response(e.error, http.UNAUTHORIZED)
 
     return database_info(schema_version)
 
@@ -75,7 +74,7 @@ class HttpUtils(object):
         response = flask.make_response(database.contents)
 
         headers = cls.build_extra_contents_headers(database.contents)
-        for name, value in headers.iteritems():
+        for name, value in headers.items():
             response.headers[name] = value
 
         return response
@@ -172,11 +171,13 @@ class Deployer(object):
         if len(signed_files) == 0:
             return
 
-        public_key = self.find_public_key(signed_files.itervalues().next())
+        signed_files = iter(signed_files.values())
+
+        public_key = self.find_public_key(next(signed_files))
         if not public_key:
             raise DeployAuthenticationError()
 
-        for signed_file in itertools.islice(signed_files.itervalues(), 1):
+        for signed_file in itertools.islice(signed_files, 1):
             if not self.is_signed_file_authentic(signed_file, public_key):
                 raise DeployAuthenticationError()
 
@@ -281,13 +282,13 @@ class Deployer(object):
 
 class DeployDataError(ValueError):
     def __init__(self, error):
-        super(DeployDataError, self).__init__()
+        super().__init__()
         self.error = error
 
 
 class DeployConfictError(ValueError):
     def __init__(self, error):
-        super(DeployConfictError, self).__init__()
+        super().__init__()
         self.error = error
 
 

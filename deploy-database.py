@@ -1,17 +1,15 @@
-#!/usr/bin/python2
+#!/usr/bin/python3
 # coding: utf-8
 
 
-from __future__ import absolute_import, unicode_literals, print_function
 import argparse
 import getpass
 import zipfile
-import ConfigParser
+import configparser
 import os
 import subprocess
 import tempfile
 import collections
-import io
 import shutil
 
 from Crypto.Hash import SHA512
@@ -50,7 +48,7 @@ class Config(object):
 
     @classmethod
     def get_config_parser(cls):
-        parser = ConfigParser.SafeConfigParser()
+        parser = configparser.ConfigParser()
         parser.read(cls.get_config_file_path())
         return parser
 
@@ -93,7 +91,7 @@ describe = DescribeDecorator
 
 class DatabaseDeploymentError(Exception):
     def __init__(self, reason):
-        super(DatabaseDeploymentError, self).__init__()
+        super().__init__()
         self.reason = reason
 
 
@@ -145,7 +143,7 @@ class VersionDeployer(object):
                          is_migration_update):
         files = {
             self.FORM_CONTENTS_KEY: contents,
-            self.FORM_SCHEMA_VERSION_KEY: unicode(schema_version).encode(
+            self.FORM_SCHEMA_VERSION_KEY: str(schema_version).encode(
                 self.FORM_STRING_DATA_ENCODING),
             self.FORM_VERSION_KEY: commit_sha.encode(
                 self.FORM_STRING_DATA_ENCODING),
@@ -162,9 +160,11 @@ class VersionDeployer(object):
 
     def bool_to_form_value(self, value):
         if value:
-            return self.FORM_VALUE_TRUE
+            form_value = self.FORM_VALUE_TRUE
         else:
-            return self.FORM_VALUE_FALSE
+            form_value = self.FORM_VALUE_FALSE
+
+        return form_value.encode(self.FORM_STRING_DATA_ENCODING)
 
     def append_file_to_dict(self, target_dict, dict_key, data):
         dict_signature_key = '{}{}'.format(dict_key, self.FORM_SIGNATURE_SUFFIX)
@@ -237,7 +237,7 @@ class DatabaseFileMaker(object):
         return self.login_to_repo(username, password)
 
     def get_credentials(self):
-        return raw_input('Username: '), getpass.getpass('Password: ')
+        return input('Username: '), getpass.getpass('Password: ')
 
     @describe(start='Logging in to repo...', done='done.')
     def login_to_repo(self, username, password):
@@ -310,7 +310,7 @@ class DatabaseFileMaker(object):
         file_path = os.path.join(self.get_repo_dir(),
                                  self.SCHEMA_DIR,
                                  self.SCHEMA_VERSION_FILE_NAME)
-        with io.open(file_path, 'r', encoding=self.ENCODING) as f:
+        with open(file_path, 'r', encoding=self.ENCODING) as f:
             return '\n'.join(f.readlines()).strip()
 
     def get_schema_version(self, schema_version_string):
