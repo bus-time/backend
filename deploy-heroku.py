@@ -51,10 +51,10 @@ class Deployer(object):
         return ['heroku'] + args + ['--remote', self.remote]
 
     def have_running_dynos(self):
-        return self.heroku_check_output(['ps']) != ''
+        return not self.heroku_check_output(['ps'])
 
     def heroku_check_output(self, args):
-        return subprocess.check_output(self.build_heroku_command(args))
+        return subprocess.check_output(self.build_heroku_command(args)).strip()
 
     def deploy_application(self):
         subprocess.check_call(self.build_push_command())
