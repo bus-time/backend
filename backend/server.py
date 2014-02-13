@@ -12,6 +12,7 @@ compressor = compress.Compress(app)
 app.config['COMPRESS_MIMETYPES'] = ['application/json',
                                     'application/octet-stream']
 
+
 import backend.views
 
 

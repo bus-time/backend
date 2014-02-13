@@ -64,6 +64,7 @@ class Deployer(object):
 
     def build_push_command(self):
         command = ['git', 'push', self.remote, 'HEAD:master']
+
         if self.force:
             command.append('--force')
 
