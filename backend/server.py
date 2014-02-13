@@ -1,8 +1,6 @@
 # coding: utf-8
 
 
-from __future__ import absolute_import
-
 import flask
 from flask.ext import compress
 

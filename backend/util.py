@@ -1,8 +1,7 @@
 # coding: utf-8
 
 
-from __future__ import absolute_import, unicode_literals
-import ConfigParser
+import configparser
 import collections
 import os
 
@@ -29,7 +28,7 @@ class Config(object):
 
     @classmethod
     def get_config_parser(cls):
-        parser = ConfigParser.SafeConfigParser(defaults=cls.get_defaults())
+        parser = configparser.ConfigParser(defaults=cls.get_defaults())
         parser.read(cls.get_config_file_path())
         return parser
 
