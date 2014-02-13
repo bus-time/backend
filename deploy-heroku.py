@@ -58,9 +58,7 @@ class Deployer(object):
 
     def deploy_application(self):
         subprocess.check_call(self.build_push_command())
-        self.heroku_check_call(
-            ['run', 'alembic --config config/alembic.ini upgrade head']
-        )
+        self.heroku_check_call(self.build_alembic_command())
 
     def build_push_command(self):
         command = ['git', 'push', self.remote, 'HEAD:master']
@@ -69,6 +67,9 @@ class Deployer(object):
             command.append('--force')
 
         return command
+
+    def build_alembic_command(self):
+        return ['run', 'alembic --config config/alembic.ini upgrade head']
 
     def start_web(self):
         self.heroku_check_call(['ps:scale', 'web=1'])
