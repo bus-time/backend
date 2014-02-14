@@ -9,4 +9,4 @@ made-file-name = bustime.db
 
 [deploy]
 url = http://bustime-backend-user.herokuapp.com/databases
-signature-key-file = /home/user/name.surname
+signature-key-file = /home/user/firstname.lastname

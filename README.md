@@ -79,7 +79,7 @@ You will need Heroku account and Heroku Toolbelt set up to work with your accoun
 
 You will need SQLite 3.7.11+, SSH, Python 2.7.+ and PIP installed.
 
-1. Generate RSA key pair named `name.surname` that will be used for deploy data signing.
+1. Generate RSA key pair named `firstname.lastname` that will be used for deploy data signing.
 
   ```
   $ ssh-keygen -t rsa
@@ -91,7 +91,7 @@ You will need SQLite 3.7.11+, SSH, Python 2.7.+ and PIP installed.
 2. Push your public key to Heroku if necessary.
 
   ```
-  $ cp <name.surname.pub> config
+  $ cp <firstname.lastname.pub> config
   $ git add .
   $ git commit
   $ python deploy-heroku.py
