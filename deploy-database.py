@@ -237,6 +237,7 @@ class DatabaseFileMaker(object):
         return self.login_to_repo(username, password)
 
     def get_credentials(self):
+        print('Enter your GitHub credentials.')
         return input('Username: '), getpass.getpass('Password: ')
 
     @describe(start='Logging in to repo...', done='done.')
