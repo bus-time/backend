@@ -83,6 +83,7 @@ You will need SQLite 3.7.11+, SSH, Python 2.7.+ and PIP installed.
 
   ```
   $ ssh-keygen -t rsa
+  $ cp <firstname.lastname.pub> config
   ```
 
   The private key should NOT be protected with passphrase, because as for now PyCrypto does not
@@ -91,7 +92,6 @@ You will need SQLite 3.7.11+, SSH, Python 2.7.+ and PIP installed.
 2. Push your public key to Heroku if necessary.
 
   ```
-  $ cp <firstname.lastname.pub> config
   $ git add .
   $ git commit
   $ python deploy-heroku.py
