@@ -51,23 +51,25 @@ class Deployer(object):
         return ['heroku'] + args + ['--remote', self.remote]
 
     def have_running_dynos(self):
-        return self.heroku_check_output(['ps']) != ''
+        return not self.heroku_check_output(['ps'])
 
     def heroku_check_output(self, args):
-        return subprocess.check_output(self.build_heroku_command(args))
+        return subprocess.check_output(self.build_heroku_command(args)).strip()
 
     def deploy_application(self):
         subprocess.check_call(self.build_push_command())
-        self.heroku_check_call(
-            ['run', 'alembic --config config/alembic.ini upgrade head']
-        )
+        self.heroku_check_call(self.build_alembic_command())
 
     def build_push_command(self):
         command = ['git', 'push', self.remote, 'HEAD:master']
+
         if self.force:
             command.append('--force')
 
         return command
+
+    def build_alembic_command(self):
+        return ['run', 'alembic --config config/alembic.ini upgrade head']
 
     def start_web(self):
         self.heroku_check_call(['ps:scale', 'web=1'])

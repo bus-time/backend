@@ -114,6 +114,7 @@ class VersionDeployer(object):
     def deploy_version(self):
         with DatabaseFileMaker() as maker:
             latest_version, migrated_versions = maker.make_database_file_infos()
+
             self.deploy_database(latest_version, False)
             for migrated_version in migrated_versions:
                 self.deploy_database(migrated_version, True)
@@ -177,7 +178,6 @@ class VersionDeployer(object):
     def make_signature(self, data, key):
         sha = SHA512.new()
         sha.update(data)
-
         return PKCS1_PSS.new(key).sign(sha)
 
     def build_error_text(self, response):
@@ -237,6 +237,7 @@ class DatabaseFileMaker(object):
         return self.login_to_repo(username, password)
 
     def get_credentials(self):
+        print('Enter your GitHub credentials.')
         return input('Username: '), getpass.getpass('Password: ')
 
     @describe(start='Logging in to repo...', done='done.')
@@ -310,11 +311,13 @@ class DatabaseFileMaker(object):
         file_path = os.path.join(self.get_repo_dir(),
                                  self.SCHEMA_DIR,
                                  self.SCHEMA_VERSION_FILE_NAME)
+
         with open(file_path, 'r', encoding=self.ENCODING) as f:
             return '\n'.join(f.readlines()).strip()
 
     def get_schema_version(self, schema_version_string):
         schema_version = int(schema_version_string)
+
         if not self.is_valid_schema_version(schema_version):
             raise ValueError()
 
@@ -331,6 +334,7 @@ class DatabaseFileMaker(object):
 
         subprocess.check_call(['make', make_target,
                                '--directory', self.get_repo_dir()])
+
         return os.path.join(self.get_repo_dir(), database_file_name)
 
     def get_repo_dir(self):
