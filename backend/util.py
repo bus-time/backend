@@ -15,7 +15,6 @@ class Config(object):
     VALUE_DB_URL = ConfigKey('db', 'url')
 
     ENV_HEROKU_DATABASE_URL = 'DATABASE_URL'
-    HEROKU_TMP_DIR = '/tmp'
 
     @classmethod
     def get_config_value(cls, config_key):
