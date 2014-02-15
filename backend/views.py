@@ -52,6 +52,10 @@ def database_deploy():
     return database_info(schema_version)
 
 
+def handle_error(exception):
+    return HttpUtils.make_error_response(exception)
+
+
 class HttpUtils(object):
     HEADER_CONTENT_TYPE = 'Content-Type'
     HEADER_CONTENT_DISPOSITION = 'Content-Disposition'
@@ -59,6 +63,8 @@ class HttpUtils(object):
 
     CONTENT_TYPE_OCTET_STREAM = 'application/octet-stream'
     CONTENT_DISPOSITION_DB_FILE = 'attachment; filename=bus-time.db'
+
+    INTERNAL_ERROR_MESSAGE = 'Internal server error'
 
     @classmethod
     def build_database_info_response(cls, database):
@@ -94,12 +100,29 @@ class HttpUtils(object):
         return sha.hexdigest()
 
     @classmethod
-    def make_error_response(cls, error, code):
+    def make_error_response(cls, *args):
+        message, code = cls.build_error_info_from_args(*args)
         response = {
-            'error': error
+            'error': message
         }
-
         return flask.jsonify(response), code
+
+    @classmethod
+    def build_error_info_from_args(cls, *args):
+        if len(args) == 2:
+            return args
+        elif len(args) == 1:
+            exception = args[0]
+            return cls.build_error_info_from_exception(exception)
+        else:
+            raise RuntimeError(args)
+
+    @classmethod
+    def build_error_info_from_exception(cls, exception):
+        if isinstance(exception, wzex.HTTPException):
+            return exception.description, exception.code
+        else:
+            return cls.INTERNAL_ERROR_MESSAGE, http.INTERNAL_SERVER_ERROR
 
 
 class Deployer(object):

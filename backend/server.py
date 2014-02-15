@@ -3,6 +3,7 @@
 
 import flask
 from flask.ext import compress
+from werkzeug import exceptions as wzex
 
 
 app = flask.Flask(__name__)
@@ -14,6 +15,10 @@ app.config['COMPRESS_MIMETYPES'] = ['application/json',
 
 
 import backend.views
+
+
+for code in wzex.default_exceptions.keys():
+    app.error_handler_spec[None][code] = backend.views.handle_error
 
 
 @app.teardown_appcontext
