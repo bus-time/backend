@@ -1,5 +1,7 @@
 # coding: utf-8
 
+import sys
+import logging
 
 import flask
 from flask.ext import compress
@@ -19,6 +21,11 @@ import backend.views
 
 for code in wzex.default_exceptions.keys():
     app.error_handler_spec[None][code] = backend.views.handle_error
+
+if not app.debug:
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setLevel(logging.WARNING)
+    app.logger.addHandler(handler)
 
 
 @app.teardown_appcontext
