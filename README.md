@@ -4,7 +4,7 @@ Provides simple Flask-based web server for Bus Time updates backend.
 
 ## Local Running
 
-You will need PostgreSQL 9.+, Python 2.7.+ and PIP installed.
+You will need PostgreSQL 9.+, Python 3.+ and PIP installed.
 
 1. Create empty PostgreSQL database for the Backend.
 
@@ -43,7 +43,8 @@ not remote Heroku one.
 
 ## Deploying to Heroku
 
-You will need Heroku account and Heroku Toolbelt set up to work with your account.
+You will need Python 2.7.+ or 3.+ installed as well as
+Heroku account and Heroku Toolbelt set up to work with your account.
 
 1. Create Heroku application.
 
@@ -77,7 +78,7 @@ You will need Heroku account and Heroku Toolbelt set up to work with your accoun
 
 ## Deploying Bus Time Database Version
 
-You will need SQLite 3.7.11+, SSH, Python 2.7.+ and PIP installed.
+You will need SQLite 3.7.11+, SSH, Python 3.+ and PIP installed.
 
 1. Generate RSA key pair named `firstname.lastname` that will be used for deploy data signing.
 
