@@ -16,6 +16,10 @@ class Config(object):
 
     ENV_HEROKU_DATABASE_URL = 'DATABASE_URL'
 
+    OPENSHIFT_POSTGRESQL_URL_TEMPLATE = 'postgresql://{}:{}'
+    ENV_OPENSHIFT_POSTGRESQL_DB_HOST = 'OPENSHIFT_POSTGRESQL_DB_HOST'
+    ENV_OPENSHIFT_POSTGRESQL_DB_PORT = 'OPENSHIFT_POSTGRESQL_DB_PORT'
+
     @classmethod
     def get_config_value(cls, config_key):
         parser = cls.get_config_parser()
@@ -35,6 +39,8 @@ class Config(object):
     def get_defaults(cls):
         if cls.is_heroku_hosted():
             return cls.get_heroku_defaults()
+        elif cls.is_openshift_hosted():
+            return cls.get_openshift_defaults()
         else:
             return None
 
@@ -47,6 +53,23 @@ class Config(object):
         return {
             cls.VALUE_DB_URL.option: os.environ[cls.ENV_HEROKU_DATABASE_URL],
         }
+
+    @classmethod
+    def is_openshift_hosted(cls):
+        return os.environ.get(cls.ENV_OPENSHIFT_POSTGRESQL_DB_HOST) is not None
+
+    @classmethod
+    def get_openshift_defaults(cls):
+        return {
+            cls.VALUE_DB_URL.option: cls.get_openshift_db_url()
+        }
+
+    @classmethod
+    def get_openshift_db_url(cls):
+        return cls.OPENSHIFT_POSTGRESQL_URL_TEMPLATE.format(
+            os.environ.get(cls.ENV_OPENSHIFT_POSTGRESQL_DB_HOST),
+            os.environ.get(cls.ENV_OPENSHIFT_POSTGRESQL_DB_PORT)
+        )
 
     @classmethod
     def get_config_file_path(cls):
