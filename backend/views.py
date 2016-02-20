@@ -189,8 +189,10 @@ class Deployer(object):
         return None
 
     def get_public_keys(self):
-        key_file_mask = os.path.join(util.Config.get_deployment_key_dir(),
-                                     '*.{}'.format(self.DEPLOYMENT_KEY_EXT))
+        key_file_mask = os.path.join(
+            util.Config.get().deployment_key_dir,
+            '*.{}'.format(self.DEPLOYMENT_KEY_EXT)
+        )
         for key_file in glob.glob(key_file_mask):
             yield self.import_public_key(key_file)
 

@@ -9,7 +9,7 @@ from backend import util
 
 
 engine = sa.create_engine(
-    util.Config.get_config_value(util.Config.VALUE_DB_URL)
+    util.Config.get().db_url
 )
 database_session = orm.scoped_session(orm.sessionmaker(bind=engine))
 
