@@ -1,0 +1,3 @@
+#!/bin/sh
+
+alembic --config $OPENSHIFT_REPO_DIR/config/alembic.ini upgrade head
