@@ -8,10 +8,10 @@ import os
 
 
 class Config(metaclass=abc.ABCMeta):
-    _config = None
-
     HEROKU_DYNO_VARIABLE = 'DYNO'
     OPENSHIFT_APP_NAME_VARIABLE = 'OPENSHIFT_APP_NAME'
+
+    _config = None
 
     @property
     @abc.abstractmethod
@@ -25,9 +25,11 @@ class Config(metaclass=abc.ABCMeta):
 
     @classmethod
     def get(cls):
-        if not cls._config:
-            cls._config = cls._create()
         return cls._config
+
+    @classmethod
+    def init(cls, config=None):
+        cls._config = config or cls._create()
 
     @classmethod
     def _create(cls):

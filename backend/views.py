@@ -19,18 +19,22 @@ from backend.server import app
 
 @app.route('/databases/<int:schema_version>')
 def database_info(schema_version):
-    database = find_database(schema_version)
-    return HttpUtils.build_database_info_response(database)
+    with db.Session() as session:
+        database = find_database(session, schema_version)
+        return HttpUtils.build_database_info_response(database)
 
 
 @app.route('/databases/<int:schema_version>/contents')
 def database_contents(schema_version):
-    database = find_database(schema_version)
-    return HttpUtils.build_database_contents_response(database)
+    with db.Session() as session:
+        database = find_database(session, schema_version)
+        return HttpUtils.build_database_contents_response(database)
 
 
-def find_database(schema_version):
-    database = db.Database.find_by_schema_version(schema_version)
+def find_database(session, schema_version):
+    database = db.Database.find_by_schema_version(
+        session, schema_version
+    )
 
     if not database:
         wzex.abort(http.NOT_FOUND)
@@ -239,19 +243,22 @@ class Deployer(object):
 
     def update_database(self, contents, schema_version, version,
                         is_migration_update):
-        latest_database = db.Database.find_latest()
-        self.check_database_conflicts(latest_database, schema_version, version,
-                                      is_migration_update)
+        with db.Session() as session:
+            latest_database = db.Database.find_latest(session)
+            self.check_database_conflicts(
+                latest_database,
+                schema_version,
+                version,
+                is_migration_update
+            )
 
-        same_schema_database = db.Database.find_by_schema_version(
-            schema_version
-        )
-        if same_schema_database:
-            self.delete_database(same_schema_database)
+            same_schema_database = db.Database.find_by_schema_version(
+                session, schema_version
+            )
+            if same_schema_database:
+                self.delete_database(session, same_schema_database)
 
-        self.create_database(contents, schema_version, version)
-
-        db.database_session.commit()
+            self.create_database(session, contents, schema_version, version)
 
     def check_database_conflicts(self, latest_database, schema_version, version,
                                  is_migration_update):
@@ -271,15 +278,15 @@ class Deployer(object):
         return (latest_database.schema_version == schema_version
                 and latest_database.version == version)
 
-    def delete_database(self, database):
-        db.database_session.delete(database)
-        db.database_session.flush()
+    def delete_database(self, session, database):
+        session.delete(database)
+        session.flush()
 
-    def create_database(self, contents, schema_version, version):
+    def create_database(self, session, contents, schema_version, version):
         database = db.Database(schema_version=schema_version,
                                version=version,
                                contents=contents)
-        db.database_session.add(database)
+        session.add(database)
 
 
 class DeployDataError(ValueError):

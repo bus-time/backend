@@ -7,14 +7,30 @@ from sqlalchemy import orm
 
 from backend import util
 
-
-engine = sa.create_engine(
-    util.Config.get().db_url
-)
-database_session = orm.scoped_session(orm.sessionmaker(bind=engine))
-
 Base = declarative.declarative_base()
-Base.query = database_session.query_property()
+
+
+class Session:
+    _session_class = None
+
+    def __init__(self):
+        if not self._session_class:
+            self._session_class = orm.sessionmaker(bind=self._create_engine())
+
+        self._session = self._session_class()
+
+    def _create_engine(self):
+        return sa.create_engine(util.Config.get().db_url)
+
+    def __enter__(self):
+        return self._session
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self._session.rollback()
+        else:
+            self._session.commit()
+        self._session.close()
 
 
 class Database(Base):
@@ -35,13 +51,13 @@ class Database(Base):
         self.contents = contents
 
     @classmethod
-    def find_by_schema_version(cls, schema_version):
-        return (Database.query
+    def find_by_schema_version(cls, session, schema_version):
+        return (session.query(Database)
                 .filter(Database.schema_version == schema_version)
                 .first())
 
     @classmethod
-    def find_latest(cls):
-        return (Database.query
+    def find_latest(cls, session):
+        return (session.query(Database)
                 .order_by(Database.schema_version.desc())
                 .first())
