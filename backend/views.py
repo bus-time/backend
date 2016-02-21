@@ -13,33 +13,30 @@ from Crypto.Signature import PKCS1_PSS
 import flask
 from werkzeug import exceptions as wzex
 
-from backend import db, util
+from backend import db, util, service
 from backend.server import app
 
 
 @app.route('/databases/<int:schema_version>')
 def database_info(schema_version):
-    with db.Session() as session:
-        database = find_database(session, schema_version)
-        return HttpUtils.build_database_info_response(database)
+    try:
+        schema_version, version = service.DatabaseQuery().get_version_info(
+            schema_version
+        )
+        return flask.jsonify(
+            dict(schema_version=schema_version, version=version)
+        )
+    except service.NoDatabaseFound:
+        wzex.abort(http.NOT_FOUND)
 
 
 @app.route('/databases/<int:schema_version>/contents')
 def database_contents(schema_version):
-    with db.Session() as session:
-        database = find_database(session, schema_version)
-        return HttpUtils.build_database_contents_response(database)
-
-
-def find_database(session, schema_version):
-    database = db.Database.find_by_schema_version(
-        session, schema_version
-    )
-
-    if not database:
+    try:
+        contents = service.DatabaseQuery().get_contents(schema_version)
+        return HttpUtils.build_database_contents_response(contents)
+    except service.NoDatabaseFound:
         wzex.abort(http.NOT_FOUND)
-
-    return database
 
 
 @app.route('/databases', methods=['POST'])
@@ -65,34 +62,25 @@ class HttpUtils(object):
     CONTENT_DISPOSITION_DB_FILE = 'attachment; filename=bus-time.db'
 
     @classmethod
-    def build_database_info_response(cls, database):
-        version_info_dict = {
-            'schema_version': database.schema_version,
-            'version': database.version
-        }
+    def build_database_contents_response(cls, contents):
+        response = flask.make_response(contents)
 
-        return flask.jsonify(version_info_dict)
-
-    @classmethod
-    def build_database_contents_response(cls, database):
-        response = flask.make_response(database.contents)
-
-        headers = cls.build_extra_contents_headers(database.contents)
+        headers = cls._build_extra_contents_headers(contents)
         for name, value in headers.items():
             response.headers[name] = value
 
         return response
 
     @classmethod
-    def build_extra_contents_headers(cls, contents):
+    def _build_extra_contents_headers(cls, contents):
         return {
             cls.HEADER_CONTENT_TYPE: cls.CONTENT_TYPE_OCTET_STREAM,
             cls.HEADER_CONTENT_DISPOSITION: cls.CONTENT_DISPOSITION_DB_FILE,
-            cls.HEADER_X_CONTENT_SHA256: cls.calc_contents_sha256(contents)
+            cls.HEADER_X_CONTENT_SHA256: cls._calc_contents_sha256(contents)
         }
 
     @classmethod
-    def calc_contents_sha256(cls, contents):
+    def _calc_contents_sha256(cls, contents):
         sha = SHA256.new()
         sha.update(contents)
         return sha.hexdigest()

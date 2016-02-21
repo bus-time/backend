@@ -11,3 +11,7 @@ alembic==0.6.0
 
 # Util
 pycrypto==2.6.1
+
+# Unit testing
+py==1.4.31
+pytest==2.8.7

@@ -13,11 +13,14 @@ Base = declarative.declarative_base()
 class Session:
     _session_class = None
 
-    def __init__(self):
+    def __init__(self, init_schema=False):
         if not self._session_class:
             self._session_class = orm.sessionmaker(bind=self._create_engine())
 
         self._session = self._session_class()
+
+        if init_schema:
+            Base.metadata.create_all(self._session.get_bind())
 
     def _create_engine(self):
         return sa.create_engine(util.Config.get().db_url)
@@ -49,12 +52,6 @@ class Database(Base):
         self.schema_version = schema_version
         self.version = version
         self.contents = contents
-
-    @classmethod
-    def find_by_schema_version(cls, session, schema_version):
-        return (session.query(Database)
-                .filter(Database.schema_version == schema_version)
-                .first())
 
     @classmethod
     def find_latest(cls, session):
