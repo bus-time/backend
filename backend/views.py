@@ -20,9 +20,7 @@ from backend.server import app
 @app.route('/databases/<int:schema_version>')
 def database_info(schema_version):
     try:
-        schema_version, version = service.DatabaseQuery().get_version_info(
-            schema_version
-        )
+        version = service.DatabaseQuery().get_version(schema_version)
         return flask.jsonify(
             dict(schema_version=schema_version, version=version)
         )

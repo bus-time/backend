@@ -5,12 +5,12 @@ from backend import db
 
 
 class DatabaseQuery:
-    def get_version_info(self, schema_version):
+    def get_version(self, schema_version):
         with db.Session() as session:
             database = self._find_database(session, schema_version)
             if not database:
                 raise NoDatabaseFound()
-            return database.schema_version, database.version
+            return database.version
 
     def _find_database(self, session, schema_version):
         return (session.query(db.Database)

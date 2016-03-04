@@ -47,19 +47,14 @@ class BaseDbAwareTest:
 class TestDatabaseQuery(BaseDbAwareTest):
     def test_get_existing_version_info_succeeds(self):
         self.init_database()
-
-        schema_version, version = service.DatabaseQuery().get_version_info(
-            self.MIN_VERSION
-        )
-
-        assert schema_version == self.MIN_VERSION
+        version = service.DatabaseQuery().get_version(self.MIN_VERSION)
         assert version == str(self.MIN_VERSION)
 
     def test_get_non_existing_version_info_fails(self):
         self.init_database()
 
         with pytest.raises(service.NoDatabaseFound):
-            service.DatabaseQuery().get_version_info(
+            service.DatabaseQuery().get_version(
                 self.MAX_VERSION + 1
             )
 
