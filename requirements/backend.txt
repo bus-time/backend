@@ -1,17 +1,16 @@
-# Server
+alembic==0.6.0
 Flask==0.10.1
 Flask-Compress==1.0.0
 gunicorn==18.0
-simplejson==3.3.1
-
-# Database
-SQLAlchemy==0.8.2
+itsdangerous==0.24
+Jinja2==2.8
+Mako==1.0.4
+MarkupSafe==0.23
+pip-autoremove==0.9.0
 psycopg2==2.5.1
-alembic==0.6.0
-
-# Util
-pycrypto==2.6.1
-
-# Unit testing
 py==1.4.31
+pycrypto==2.6.1
 pytest==2.8.7
+simplejson==3.3.1
+SQLAlchemy==0.8.2
+Werkzeug==0.11.4
