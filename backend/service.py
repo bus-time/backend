@@ -3,6 +3,7 @@
 
 import abc
 import base64
+import codecs
 import collections
 import json
 
@@ -301,3 +302,18 @@ class DatabaseUpdate:
             contents=schema_version_content.content
         )
         session.add(new_database)
+
+
+class Sha256:
+    HEX_ENCODING = 'hex'
+    ASCII_ENCODING = 'ascii'
+
+    def make_hash(self, binary):
+        sha256 = crypto_hashes.Hash(
+            crypto_hashes.SHA256(), backend=crypto_backend()
+        )
+        sha256.update(binary)
+        digest_binary = sha256.finalize()
+
+        hex_binary = codecs.encode(digest_binary, self.HEX_ENCODING)
+        return hex_binary.decode(self.ASCII_ENCODING)

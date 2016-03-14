@@ -4,7 +4,6 @@
 import http.client as http
 
 import flask
-from Crypto.Hash import SHA256
 from werkzeug import exceptions as wzex
 
 from backend import service
@@ -79,14 +78,8 @@ class HttpUtils(object):
         return {
             cls.HEADER_CONTENT_TYPE: cls.CONTENT_TYPE_OCTET_STREAM,
             cls.HEADER_CONTENT_DISPOSITION: cls.CONTENT_DISPOSITION_DB_FILE,
-            cls.HEADER_X_CONTENT_SHA256: cls._calc_contents_sha256(contents)
+            cls.HEADER_X_CONTENT_SHA256: service.Sha256().make_hash(contents)
         }
-
-    @classmethod
-    def _calc_contents_sha256(cls, contents):
-        sha = SHA256.new()
-        sha.update(contents)
-        return sha.hexdigest()
 
     @classmethod
     def make_error_response(cls, error, code):

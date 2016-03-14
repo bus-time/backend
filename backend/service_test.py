@@ -604,3 +604,9 @@ class TestSignatureVerifier:
         assert not service.SignatureVerifier().verify(
             keys, text, signature
         )
+
+
+class TestSha256:
+    def test(self):
+        digest = service.Sha256().make_hash(b'lorem ipsum')
+        assert digest == '5e2bf57d3f40c4b6df69daf1936cb766f832374b4fc0259a7cbff06e2f70f269'
