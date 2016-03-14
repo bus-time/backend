@@ -2,8 +2,8 @@
 
 
 import abc
-import configparser
 import collections
+import configparser
 import os
 
 
@@ -21,6 +21,11 @@ class Config(metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def deployment_key_dir(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def key_binaries(self):
         pass
 
     @classmethod
@@ -65,6 +70,10 @@ class HerokuConfig(Config):
         relative = os.path.join(self._get_script_dir(), self.KEY_DIR)
         return os.path.abspath(relative)
 
+    @property
+    def key_binaries(self):
+        return EnvVariableKeyBinarySource(os.environ).get_key_binaries()
+
 
 class OpenShiftConfig(Config):
     DATABASE_URL_TEMPLATE = 'postgresql://{}:{}'
@@ -85,12 +94,17 @@ class OpenShiftConfig(Config):
         relative = os.path.join(self._get_script_dir(), self.KEY_DIR)
         return os.path.abspath(relative)
 
+    @property
+    def key_binaries(self):
+        return EnvVariableKeyBinarySource(os.environ).get_key_binaries()
+
 
 class FileConfig(Config):
     ConfigKey = collections.namedtuple('ConfigKey', ['section', 'option'])
 
     CONFIG_FILE_DIR = '../config'
     CONFIG_FILE_NAME = 'backend.ini'
+    PUBLIC_KEY_DIR = '~/.ssh'
 
     DB_URL_CONFIG_KEY = ConfigKey('db', 'url')
 
@@ -119,3 +133,50 @@ class FileConfig(Config):
     @property
     def deployment_key_dir(self):
         return self._get_config_dir_path()
+
+    @property
+    def key_binaries(self):
+        return DirectoryKeyBinarySource(self.PUBLIC_KEY_DIR).get_key_binaries()
+
+
+class KeyBinarySource(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def get_key_binaries(self):
+        pass
+
+
+class EnvVariableKeyBinarySource(KeyBinarySource):
+    PREFIX = 'BUSTIME_PUBLICATION_KEY_'
+    ASCII_ENCODING = 'ascii'
+
+    def __init__(self, env_variable_dict):
+        self._env_variable_dict = env_variable_dict
+
+    def get_key_binaries(self):
+        return [
+            v.encode(self.ASCII_ENCODING)
+            for k, v in self._env_variable_dict.items()
+            if k.startswith(self.PREFIX)
+        ]
+
+
+class DirectoryKeyBinarySource(KeyBinarySource):
+    KEY_POSTFIX = '.pub'
+    READ_BINARY_MODE = 'rb'
+
+    def __init__(self, directory):
+        self._directory = directory
+
+    def get_key_binaries(self):
+        return [
+            self._read_file(self._directory, x)
+            for x in os.listdir(self._directory)
+            if x.endswith(self.KEY_POSTFIX)
+        ]
+
+    def _read_file(self, dir_name, file_name):
+        full_file_name = os.path.join(dir_name, file_name)
+        with open(full_file_name, mode=self.READ_BINARY_MODE) as f:
+            return f.read()
+
+
