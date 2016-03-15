@@ -31,13 +31,17 @@ class DatabasesView(FlaskView):
         except service.NoDatabaseFound:
             flask.abort(HTTPStatus.NOT_FOUND)
 
-    @route('/<int:schema_version>/contents')
-    def contents(self, schema_version):
+    @route('/<int:schema_version>/content')
+    def content(self, schema_version):
         try:
             content = service.DatabaseQuery().get_content(schema_version)
             return self._build_database_contents_response(content)
         except service.NoDatabaseFound:
             flask.abort(HTTPStatus.NOT_FOUND)
+
+    @route('/<int:schema_version>/contents')
+    def contents(self, schema_version):
+        return self.content(schema_version)
 
     @classmethod
     def _build_database_contents_response(cls, content):
