@@ -76,7 +76,7 @@ X-Content-Signature: A7Mb/Unk54CuAWn1Vkds+RxsJWUFwH...
 Here `content` is Base64-encoded database file content;
 `X-Content-Signature` header is Base64-encoded signature of
 request body (JSON text above, encoded in UTF-8); signature
-is calculated according to RSASSA-PKCS1-v1_5 schema
+is calculated according to RSASSA-PKCS1-v1_5 scheme
 using SHA512 hash function.
 
 ### Response
