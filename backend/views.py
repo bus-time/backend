@@ -4,86 +4,78 @@
 from http import HTTPStatus
 
 import flask
+from flask.ext.classy import FlaskView, route
 
 from backend import service
 from backend.server import app
 
 
-HEADER_X_CONTENT_SIGNATURE = 'X-Content-Signature'
-MAX_UPDATE_CONTENT_LENGTH = 5 * 1024 * 1024
-
-
-@app.route('/databases/<int:schema_version>')
-def database_info(schema_version):
-    try:
-        version = service.DatabaseQuery().get_version(schema_version)
-        return flask.jsonify(
-            dict(schema_version=schema_version, version=version)
-        )
-    except service.NoDatabaseFound:
-        flask.abort(HTTPStatus.NOT_FOUND)
-
-
-@app.route('/databases/<int:schema_version>/contents')
-def database_contents(schema_version):
-    try:
-        contents = service.DatabaseQuery().get_content(schema_version)
-        return HttpUtils.build_database_contents_response(contents)
-    except service.NoDatabaseFound:
-        flask.abort(HTTPStatus.NOT_FOUND)
-
-
-@app.route('/databases', methods=['POST'])
-def database_deploy():
-    if flask.request.content_length > MAX_UPDATE_CONTENT_LENGTH:
-        flask.abort(HTTPStatus.BAD_REQUEST)
-        return
-
-    signature_text = flask.request.headers[HEADER_X_CONTENT_SIGNATURE]
-    json_data = flask.request.get_data(as_text=True)
-
-    try:
-        update = service.DatabaseUpdate()
-        update_content = update.get_update_content(json_data, signature_text)
-        update.apply_update(update_content)
-    except service.InvalidSignatureError:
-        flask.abort(HTTPStatus.UNAUTHORIZED)
-    except service.InvalidUpdateContentError:
-        flask.abort(HTTPStatus.BAD_REQUEST)
-
-    return flask.jsonify(status='success')
-
-
-class HttpUtils(object):
+class DatabasesView(FlaskView):
     HEADER_CONTENT_TYPE = 'Content-Type'
     HEADER_CONTENT_DISPOSITION = 'Content-Disposition'
     HEADER_X_CONTENT_SHA256 = 'X-Content-SHA256'
+    HEADER_X_CONTENT_SIGNATURE = 'X-Content-Signature'
 
     CONTENT_TYPE_OCTET_STREAM = 'application/octet-stream'
     CONTENT_DISPOSITION_DB_FILE = 'attachment; filename=bus-time.db'
 
-    @classmethod
-    def build_database_contents_response(cls, contents):
-        response = flask.make_response(contents)
+    MAX_UPDATE_CONTENT_LENGTH = 5 * 1024 * 1024
 
-        headers = cls._build_extra_contents_headers(contents)
+    @route('/<int:schema_version>')
+    def info(self, schema_version):
+        try:
+            version = service.DatabaseQuery().get_version(schema_version)
+            return flask.jsonify(
+                dict(schema_version=schema_version, version=version)
+            )
+        except service.NoDatabaseFound:
+            flask.abort(HTTPStatus.NOT_FOUND)
+
+    @route('/<int:schema_version>/contents')
+    def contents(self, schema_version):
+        try:
+            content = service.DatabaseQuery().get_content(schema_version)
+            return self._build_database_contents_response(content)
+        except service.NoDatabaseFound:
+            flask.abort(HTTPStatus.NOT_FOUND)
+
+    @classmethod
+    def _build_database_contents_response(cls, content):
+        response = flask.make_response(content)
+
+        headers = cls._build_extra_content_headers(content)
         for name, value in headers.items():
             response.headers[name] = value
 
         return response
 
     @classmethod
-    def _build_extra_contents_headers(cls, contents):
+    def _build_extra_content_headers(cls, contents):
         return {
             cls.HEADER_CONTENT_TYPE: cls.CONTENT_TYPE_OCTET_STREAM,
             cls.HEADER_CONTENT_DISPOSITION: cls.CONTENT_DISPOSITION_DB_FILE,
             cls.HEADER_X_CONTENT_SHA256: service.Sha256().make_hash(contents)
         }
 
-    @classmethod
-    def make_error_response(cls, error, code):
-        response = {
-            'error': error
-        }
+    @route('/', methods=['POST'])
+    def deploy(self):
+        if flask.request.content_length > self.MAX_UPDATE_CONTENT_LENGTH:
+            flask.abort(HTTPStatus.BAD_REQUEST)
+            return
 
-        return flask.jsonify(response), code
+        signature_text = flask.request.headers[self.HEADER_X_CONTENT_SIGNATURE]
+        json_data = flask.request.get_data(as_text=True)
+
+        try:
+            update = service.DatabaseUpdate()
+            update_content = update.get_update_content(json_data, signature_text)
+            update.apply_update(update_content)
+        except service.InvalidSignatureError:
+            flask.abort(HTTPStatus.UNAUTHORIZED)
+        except service.InvalidUpdateContentError:
+            flask.abort(HTTPStatus.BAD_REQUEST)
+
+        return flask.jsonify(status='success')
+
+
+DatabasesView.register(app)
