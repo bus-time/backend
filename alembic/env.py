@@ -39,7 +39,8 @@ target_metadata = get_target_metadata()
 def get_db_url():
     setup_pythonpath()
     from backend.util import Config as BackendConfig
-    return BackendConfig.get_config_value(BackendConfig.VALUE_DB_URL)
+    BackendConfig.init()
+    return BackendConfig.get().db_url
 
 
 def run_migrations_offline():
