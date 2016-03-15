@@ -22,7 +22,7 @@ You will need PostgreSQL 9.+, Python 3.3.+ and PIP installed.
 3. Install required Python packages.
 
   ```
-  $ pip install --requirement requirements/backend.txt
+  $ pip install --requirement requirements.txt
   ```
 
 4. Update database schema.
@@ -37,9 +37,7 @@ You will need PostgreSQL 9.+, Python 3.3.+ and PIP installed.
   $ python application.py
   ```
 
-6. Optionally deploy latest Bus Time database. Use [these instructions]
-(#deploying-bus-time-database-version), but proceed with local repository,
-not remote Heroku one.
+6. Optionally deploy latest Bus Time database.
 
 ## Deploying to Heroku
 
@@ -75,11 +73,11 @@ Heroku account and Heroku Toolbelt set up to work with your account.
 
   By default remote `heroku` is used, but you can specify arbitrary
   remote with `--remote <remote>` argument of the script.
-  
+
 ## Deploying to OpenShift
 
-You will need Python 3.+ installed as well as OpenShift account and 
-OpenShift Client Tools (RHC) set up to work with your account. 
+You will need Python 3.+ installed as well as OpenShift account and
+OpenShift Client Tools (RHC) set up to work with your account.
 
 The following steps should be performed from the root directory
 of local Bus Time Backend git repository.
@@ -89,71 +87,27 @@ of local Bus Time Backend git repository.
   ```
   $ rhc domain create <domain-name>
   ```
-  
+
 2. Create Python application with PostgreSQL database.
 
   ```
   $ rhc app create <app-name> python-3.3 postgresql-9.2 --repo . --no-git
   ```
-  
+
 3. Add OpenShift application git repository to local repository remotes.
 
   ```
   $ git remote add openshift <openshift-git-remote-url>
   ```
-  
+
 4. Push the repository to OpenShift via a convenience script.
-  
+
   ```
   $ python deploy-openshift.py --force
   ```
-  
+
   Argument `--force` is required for the first deployment to overwrite
   OpenShift remote repository initial contents.
-  
+
   By default remote `openshift` is used, but you can specify arbitrary
   remote with `--remote <remote>` argument of the script.
-
-## Deploying Bus Time Database Version
-
-You will need SQLite 3.7.11+, SSH, Python 3.+ and PIP installed.
-
-1. Generate RSA key pair named `firstname.lastname` that will be used for deploy data signing.
-
-  ```
-  $ ssh-keygen -t rsa
-  $ cp <firstname.lastname.pub> config
-  ```
-
-  The private key should NOT be protected with passphrase, because as for now PyCrypto does not
-  support AES encoding algorithm used by `ssh-keygen` to encrypt private key with passphrase.
-
-2. Push your public key to Heroku if necessary.
-
-  ```
-  $ git add .
-  $ git commit
-  $ python deploy-heroku.py
-  ```
-
-3. Create configuration file.
-  ```
-  $ cp config/deploy-database.ini.template config/deploy-database.ini
-  $ vi config/deploy-database.ini
-  ```
-
-4. Install required Python packages.
-
-  ```
-  $ pip install --requirement requirements/deploy-database.txt
-  ```
-
-5. Deploy latest version available in Bus Time Database repo.
-
-  ```
-  $ python deploy-database.py
-  ```
-
-  By default configuration file `config/deploy-database.ini` is used,
-  but you can specify arbitrary file with `--config-file <file>` argument
-  of the script; `<file>` should reside in `config` directory.
