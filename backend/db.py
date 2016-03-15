@@ -40,7 +40,7 @@ class Database(Base):
     __tablename__ = 'databases'
 
     __table_args__ = (
-        sa.UniqueConstraint('schema_version', 'version'),
+        sa.UniqueConstraint('schema_version'),
     )
 
     id = sa.Column(sa.Integer, primary_key=True)
