@@ -47,7 +47,7 @@ class BaseDbAwareTest:
                     db.Database(
                         schema_version=x,
                         version=str(x),
-                        contents=bytes(x)
+                        content=bytes(x)
                     )
                 )
 
@@ -66,16 +66,16 @@ class TestDatabaseQuery(BaseDbAwareTest):
                 self.MAX_VERSION + 1
             )
 
-    def test_get_existing_contents_succeeds(self):
+    def test_get_existing_content_succeeds(self):
         self.init_database()
-        contents = service.DatabaseQuery().get_contents(self.MIN_VERSION)
-        assert contents == bytes(self.MIN_VERSION)
+        content = service.DatabaseQuery().get_content(self.MIN_VERSION)
+        assert content == bytes(self.MIN_VERSION)
 
-    def test_get_non_existing_contents_fails(self):
+    def test_get_non_existing_content_fails(self):
         self.init_database()
 
         with pytest.raises(service.NoDatabaseFound):
-            service.DatabaseQuery().get_contents(self.MAX_VERSION + 1)
+            service.DatabaseQuery().get_content(self.MAX_VERSION + 1)
 
 
 class TestBase64:
@@ -287,12 +287,12 @@ class TestApplyUpdate:
             db.Database(
                 version=self._make_version(1),
                 schema_version=1,
-                contents=self._make_content(1)
+                content=self._make_content(1)
             ),
             db.Database(
                 version=self._make_version(1),
                 schema_version=2,
-                contents=self._make_content(2)
+                content=self._make_content(2)
             ),
         ]
 
@@ -347,7 +347,7 @@ class TestApplyUpdate:
         return (
             stored.version == expected.version and
             stored.schema_version == expected.schema_version and
-            stored.contents == expected.contents
+            stored.content == expected.content
         )
 
     def test_non_intersecting_db_update_succeeds(self):
@@ -355,12 +355,12 @@ class TestApplyUpdate:
             db.Database(
                 version=self._make_version(1),
                 schema_version=1,
-                contents=self._make_content(1)
+                content=self._make_content(1)
             ),
             db.Database(
                 version=self._make_version(2),
                 schema_version=2,
-                contents=self._make_content(2)
+                content=self._make_content(2)
             )
         ]
         self._init_database(existing_databases)
@@ -384,22 +384,22 @@ class TestApplyUpdate:
             db.Database(
                 version=self._make_version(1),
                 schema_version=1,
-                contents=self._make_content(1)
+                content=self._make_content(1)
             ),
             db.Database(
                 version=self._make_version(2),
                 schema_version=2,
-                contents=self._make_content(2)
+                content=self._make_content(2)
             ),
             db.Database(
                 version=self._make_version(3),
                 schema_version=3,
-                contents=self._make_content(3)
+                content=self._make_content(3)
             ),
             db.Database(
                 version=self._make_version(3),
                 schema_version=4,
-                contents=self._make_content(4)
+                content=self._make_content(4)
             ),
         ]
 
@@ -410,12 +410,12 @@ class TestApplyUpdate:
             db.Database(
                 version=self._make_version(1),
                 schema_version=1,
-                contents=self._make_content(1)
+                content=self._make_content(1)
             ),
             db.Database(
                 version=self._make_version(2),
                 schema_version=2,
-                contents=self._make_content(2)
+                content=self._make_content(2)
             )
         ]
         self._init_database(existing_databases)
@@ -439,17 +439,17 @@ class TestApplyUpdate:
             db.Database(
                 version=self._make_version(1),
                 schema_version=1,
-                contents=self._make_content(1)
+                content=self._make_content(1)
             ),
             db.Database(
                 version=self._make_version(3),
                 schema_version=2,
-                contents=self._make_content(2)
+                content=self._make_content(2)
             ),
             db.Database(
                 version=self._make_version(3),
                 schema_version=3,
-                contents=self._make_content(3)
+                content=self._make_content(3)
             )
         ]
 

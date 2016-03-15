@@ -29,13 +29,13 @@ class DatabaseQuery:
                 .filter(db.Database.schema_version == schema_version)
                 .first())
 
-    def get_contents(self, schema_version):
+    def get_content(self, schema_version):
         with db.Session() as session:
             database = self._find_database(session, schema_version)
             if not database:
                 raise NoDatabaseFound()
 
-            return database.contents
+            return database.content
 
 
 class NoDatabaseFound(RuntimeError):
@@ -299,7 +299,7 @@ class DatabaseUpdate:
         new_database = db.Database(
             version=version,
             schema_version=schema_version_content.schema_version,
-            contents=schema_version_content.content
+            content=schema_version_content.content
         )
         session.add(new_database)
 

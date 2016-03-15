@@ -46,12 +46,12 @@ class Database(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     schema_version = sa.Column(sa.Integer, nullable=False)
     version = sa.Column(sa.String, nullable=False)
-    contents = orm.deferred(sa.Column(sa.Binary, nullable=False))
+    content = orm.deferred(sa.Column(sa.Binary, nullable=False))
 
-    def __init__(self, schema_version=None, version=None, contents=None):
+    def __init__(self, schema_version=None, version=None, content=None):
         self.schema_version = schema_version
         self.version = version
-        self.contents = contents
+        self.content = content
 
     @classmethod
     def find_latest(cls, session):

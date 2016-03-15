@@ -28,7 +28,7 @@ def database_info(schema_version):
 @app.route('/databases/<int:schema_version>/contents')
 def database_contents(schema_version):
     try:
-        contents = service.DatabaseQuery().get_contents(schema_version)
+        contents = service.DatabaseQuery().get_content(schema_version)
         return HttpUtils.build_database_contents_response(contents)
     except service.NoDatabaseFound:
         wzex.abort(http.NOT_FOUND)
