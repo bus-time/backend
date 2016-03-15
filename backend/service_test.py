@@ -30,10 +30,6 @@ class SqliteDbConfig(util.Config):
         return self._db_url
 
     @property
-    def deployment_key_dir(self):
-        return None
-
-    @property
     def key_binaries(self):
         return None
 

@@ -20,11 +20,6 @@ class Config(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def deployment_key_dir(self):
-        pass
-
-    @property
-    @abc.abstractmethod
     def key_binaries(self):
         pass
 
@@ -66,11 +61,6 @@ class HerokuConfig(Config):
         return os.environ[self.ENV_DATABASE_URL]
 
     @property
-    def deployment_key_dir(self):
-        relative = os.path.join(self._get_script_dir(), self.KEY_DIR)
-        return os.path.abspath(relative)
-
-    @property
     def key_binaries(self):
         return EnvVariableKeyBinarySource(os.environ).get_key_binaries()
 
@@ -88,11 +78,6 @@ class OpenShiftConfig(Config):
             os.environ.get(self.ENV_DATABASE_HOST),
             os.environ.get(self.ENV_DATABASE_PORT)
         )
-
-    @property
-    def deployment_key_dir(self):
-        relative = os.path.join(self._get_script_dir(), self.KEY_DIR)
-        return os.path.abspath(relative)
 
     @property
     def key_binaries(self):
@@ -129,10 +114,6 @@ class FileConfig(Config):
             self.DB_URL_CONFIG_KEY.section,
             self.DB_URL_CONFIG_KEY.option
         )
-
-    @property
-    def deployment_key_dir(self):
-        return self._get_config_dir_path()
 
     @property
     def key_binaries(self):
