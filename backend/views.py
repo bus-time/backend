@@ -1,10 +1,9 @@
 # coding: utf-8
 
 
-import http.client as http
+from http import HTTPStatus
 
 import flask
-from werkzeug import exceptions as wzex
 
 from backend import service
 from backend.server import app
@@ -22,7 +21,7 @@ def database_info(schema_version):
             dict(schema_version=schema_version, version=version)
         )
     except service.NoDatabaseFound:
-        wzex.abort(http.NOT_FOUND)
+        flask.abort(HTTPStatus.NOT_FOUND)
 
 
 @app.route('/databases/<int:schema_version>/contents')
@@ -31,13 +30,13 @@ def database_contents(schema_version):
         contents = service.DatabaseQuery().get_content(schema_version)
         return HttpUtils.build_database_contents_response(contents)
     except service.NoDatabaseFound:
-        wzex.abort(http.NOT_FOUND)
+        flask.abort(HTTPStatus.NOT_FOUND)
 
 
 @app.route('/databases', methods=['POST'])
 def database_deploy():
     if flask.request.content_length > MAX_UPDATE_CONTENT_LENGTH:
-        wzex.abort(http.BAD_REQUEST)
+        flask.abort(HTTPStatus.BAD_REQUEST)
         return
 
     signature_text = flask.request.headers[HEADER_X_CONTENT_SIGNATURE]
@@ -48,9 +47,9 @@ def database_deploy():
         update_content = update.get_update_content(json_data, signature_text)
         update.apply_update(update_content)
     except service.InvalidSignatureError:
-        wzex.abort(http.UNAUTHORIZED)
+        flask.abort(HTTPStatus.UNAUTHORIZED)
     except service.InvalidUpdateContentError:
-        wzex.abort(http.BAD_REQUEST)
+        flask.abort(HTTPStatus.BAD_REQUEST)
 
     return flask.jsonify(status='success')
 
