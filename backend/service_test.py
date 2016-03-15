@@ -7,8 +7,9 @@ import json
 import tempfile
 
 import pytest
-from cryptography.hazmat import primitives as crypto_primitives
 from cryptography.hazmat.backends import default_backend as crypto_backend
+from cryptography.hazmat.primitives import hashes as crypto_hashes
+from cryptography.hazmat.primitives import serialization as crypto_serial
 from cryptography.hazmat.primitives.asymmetric import padding as crypto_padding
 from cryptography.hazmat.primitives.asymmetric import rsa as crypto_rsa
 
@@ -569,10 +570,9 @@ class TestSignatureVerifier:
         )
 
         private_key_binary = private_key.private_bytes(
-            encoding=crypto_primitives.serialization.Encoding.PEM,
-            format=(crypto_primitives.serialization.PrivateFormat
-                    .TraditionalOpenSSL),
-            encryption_algorithm=crypto_primitives.serialization.NoEncryption()
+            encoding=crypto_serial.Encoding.PEM,
+            format=crypto_serial.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=crypto_serial.NoEncryption()
         )
         public_key_binary = PublicKeySshCodec().encode(
             private_key.public_key()
@@ -586,12 +586,11 @@ class TestSignatureVerifier:
         return pair
 
     def _sign_text(self, text, private_key_binary):
-        private_key = crypto_primitives.serialization.load_pem_private_key(
+        private_key = crypto_serial.load_pem_private_key(
             private_key_binary, password=None, backend=crypto_backend()
         )
         signer = private_key.signer(
-            crypto_padding.PKCS1v15(),
-            crypto_primitives.hashes.SHA512()
+            crypto_padding.PKCS1v15(), crypto_hashes.SHA512()
         )
 
         signer.update(text.encode(self.UTF8_ENCODING))
