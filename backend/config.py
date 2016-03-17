@@ -165,5 +165,3 @@ class DirectoryKeyBinarySource(KeyBinarySource):
         full_file_name = os.path.join(dir_name, file_name)
         with open(full_file_name, mode=self.READ_BINARY_MODE) as f:
             return f.read()
-
-

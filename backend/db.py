@@ -52,9 +52,3 @@ class Database(Base):
         self.schema_version = schema_version
         self.version = version
         self.content = content
-
-    @classmethod
-    def find_latest(cls, session):
-        return (session.query(Database)
-                .order_by(Database.schema_version.desc())
-                .first())

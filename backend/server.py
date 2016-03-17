@@ -1,6 +1,5 @@
 # coding: utf-8
 
-from http import HTTPStatus
 
 import flask
 from flask.ext import compress
