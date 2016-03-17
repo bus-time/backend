@@ -29,6 +29,7 @@ Content-Length: 82
 
 ```http
 GET /databases/:schema/content
+GET /databases/:schema/contents
 ```
 
 ### Response
@@ -42,11 +43,6 @@ Content-Encoding: gzip
 X-Content-SHA256: a1e02fa6e5416c12605f923b38d018f725016cd9781951b4deea3301f7ef7eb2
 Vary: Accept-Encoding
 ```
-
-### Note
-
-Endpoint `/databases/:schema/contents` can be used as well for
-backward compatibility.
 
 ## Database Publication
 
