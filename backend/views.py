@@ -72,7 +72,9 @@ class DatabasesView(FlaskView):
             flask.abort(HTTPStatus.BAD_REQUEST)
             return
 
-        signature_text = flask.request.headers[self.HEADER_X_CONTENT_SIGNATURE]
+        signature_text = flask.request.headers.get(
+            self.HEADER_X_CONTENT_SIGNATURE, None
+        )
         json_data = flask.request.get_data(as_text=True)
 
         try:
