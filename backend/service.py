@@ -50,18 +50,12 @@ class Base64:
         if binary is None:
             return None
 
-        if binary == b'':
-            return ''
-
         return base64.b64encode(binary).decode(cls.ASCII_ENCODING)
 
     @classmethod
     def base64_str_to_binary(cls, base64_str):
         if base64_str is None:
             return None
-
-        if base64_str == '':
-            return b''
 
         return base64.b64decode(base64_str.encode(cls.ASCII_ENCODING))
 
