@@ -4,13 +4,13 @@
 
 ### Request
 
-```
+```http
 GET /databases/:schema
 ```
 
 ### Response
 
-```
+```http
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 82
@@ -27,13 +27,13 @@ Content-Length: 82
 
 ### Request
 
-```
+```http
 GET /databases/:schema/content
 ```
 
 ### Response
 
-```
+```http
 HTTP/1.0 200 OK
 Content-Type: application/octet-stream
 Content-Length: 37412
@@ -52,7 +52,7 @@ backward compatibility.
 
 ### Request
 
-```
+```http
 POST /databases
 X-Content-Signature: A7Mb/Unk54CuAWn1Vkds+RxsJWUFwH...
 ```
@@ -80,7 +80,8 @@ is calculated according to RSASSA-PKCS1-v1_5 scheme
 using SHA512 hash function.
 
 ### Response
-```
+
+```http
 HTTP/1.0 200 OK
 Content-Type: application/json
 Content-Length: 25
