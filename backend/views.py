@@ -41,7 +41,12 @@ class DatabasesView(FlaskView):
 
     @route('/<int:schema_version>/contents')
     def contents(self, schema_version):
-        return self.content(schema_version)
+        return flask.redirect(
+            flask.url_for(
+                'DatabasesView:content', schema_version=schema_version
+            ),
+            code=HTTPStatus.MOVED_PERMANENTLY
+        )
 
     @classmethod
     def _build_database_contents_response(cls, content):
