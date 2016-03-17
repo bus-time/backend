@@ -82,13 +82,13 @@ using SHA512 hash function.
 ### Response
 
 ```http
-HTTP/1.0 200 OK
+HTTP/1.0 201 Created
 Content-Type: application/json
-Content-Length: 25
+Content-Length: 59
 ```
 
 ```json
 {
-  "status": "success"
+  "version": "1554a6d60a0e5cf071e14376ce719eeb227c0a95"
 }
 ```
