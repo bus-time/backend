@@ -151,9 +151,15 @@ class DirectoryKeyBinarySource(KeyBinarySource):
     def get_key_binaries(self):
         return [
             self._read_file(self._directory, x)
-            for x in os.listdir(self._directory)
+            for x in self._safe_list_dir(self._directory)
             if x.endswith(self.KEY_POSTFIX)
         ]
+
+    def _safe_list_dir(self, directory):
+        try:
+            return os.listdir(directory)
+        except FileNotFoundError:
+            return []
 
     def _read_file(self, dir_name, file_name):
         full_file_name = os.path.join(dir_name, file_name)

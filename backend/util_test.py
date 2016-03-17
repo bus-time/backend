@@ -71,3 +71,8 @@ class TestDirectoryKeyBinarySource:
 
         with open(full_file_name, mode=self.WRITE_BINARY_MODE) as f:
             f.write(content)
+
+    def test_invalid_dir_yields_empty_key_sequence(self):
+        invalid_dir = '~/~'
+        keys = util.DirectoryKeyBinarySource(invalid_dir).get_key_binaries()
+        assert len(keys) == 0
