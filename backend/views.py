@@ -21,7 +21,7 @@ class DatabasesView(FlaskView):
 
     MAX_UPDATE_CONTENT_LENGTH = 5 * 1024 * 1024
 
-    @route('/<int:schema_version>')
+    @route('/<int:schema_version>/')
     def info(self, schema_version):
         try:
             version = service.DatabaseQuery().get_version(schema_version)
@@ -31,7 +31,7 @@ class DatabasesView(FlaskView):
         except service.NoDatabaseFound:
             flask.abort(HTTPStatus.NOT_FOUND)
 
-    @route('/<int:schema_version>/content')
+    @route('/<int:schema_version>/content/')
     def content(self, schema_version):
         try:
             content = service.DatabaseQuery().get_content(schema_version)
@@ -39,7 +39,7 @@ class DatabasesView(FlaskView):
         except service.NoDatabaseFound:
             flask.abort(HTTPStatus.NOT_FOUND)
 
-    @route('/<int:schema_version>/contents')
+    @route('/<int:schema_version>/contents/')
     def contents(self, schema_version):
         return flask.redirect(
             flask.url_for(
