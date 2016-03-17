@@ -8,8 +8,8 @@ import os
 
 
 class Config(metaclass=abc.ABCMeta):
-    HEROKU_DYNO_VARIABLE = 'DYNO'
-    OPENSHIFT_APP_NAME_VARIABLE = 'OPENSHIFT_APP_NAME'
+    PLATFORM_VARIABLE_HEROKU = 'DYNO'
+    PLATFORM_VARIABLE_OPENSHIFT = 'OPENSHIFT_APP_NAME'
 
     _config = None
 
@@ -42,11 +42,11 @@ class Config(metaclass=abc.ABCMeta):
 
     @classmethod
     def _is_heroku_hosted(cls):
-        return cls.HEROKU_DYNO_VARIABLE in os.environ
+        return cls.PLATFORM_VARIABLE_HEROKU in os.environ
 
     @classmethod
     def _is_openshift_hosted(cls):
-        return cls.OPENSHIFT_APP_NAME_VARIABLE in os.environ
+        return cls.PLATFORM_VARIABLE_OPENSHIFT in os.environ
 
     def _get_script_dir(self):
         return os.path.dirname(os.path.realpath(__file__))

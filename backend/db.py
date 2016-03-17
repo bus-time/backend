@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from sqlalchemy.ext import declarative
 from sqlalchemy import orm
 
-from backend import util
+from backend import config
 
 Base = declarative.declarative_base()
 
@@ -23,7 +23,7 @@ class Session:
             Base.metadata.create_all(self._session.get_bind())
 
     def _create_engine(self):
-        return sa.create_engine(util.Config.get().db_url)
+        return sa.create_engine(config.Config.get().db_url)
 
     def __enter__(self):
         return self._session

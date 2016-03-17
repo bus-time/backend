@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives import hashes as crypto_hashes
 from cryptography.hazmat.primitives import serialization as crypto_serial
 from cryptography.hazmat.primitives.asymmetric import padding as crypto_padding
 
-from backend import db, util
+from backend import db, config
 
 
 class DatabaseQuery:
@@ -245,7 +245,7 @@ class DatabaseUpdate:
 
     def _is_signature_valid(self, update_content_json, signature):
         return SignatureVerifier().verify(
-            util.Config.get().key_binaries,
+            config.Config.get().key_binaries,
             update_content_json,
             Base64.base64_str_to_binary(signature)
         )

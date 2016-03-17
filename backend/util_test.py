@@ -7,7 +7,7 @@ import tempfile
 from cryptography.hazmat.backends import default_backend as crypto_backend
 from cryptography.hazmat.primitives import serialization as crypto_serial
 
-from backend import util
+from backend import config
 
 
 class TestEnvVariableKeyBinarySource:
@@ -22,7 +22,7 @@ class TestEnvVariableKeyBinarySource:
             'dolor': '3'
         }
 
-        keys = util.EnvVariableKeyBinarySource(env_dict).get_key_binaries()
+        keys = config.EnvVariableKeyBinarySource(env_dict).get_key_binaries()
 
         assert set(keys) == { b'first', b'second' }
 
@@ -32,7 +32,7 @@ class TestEnvVariableKeyBinarySource:
             'dolor': 'sit'
         }
 
-        keys = util.EnvVariableKeyBinarySource(env_dict).get_key_binaries()
+        keys = config.EnvVariableKeyBinarySource(env_dict).get_key_binaries()
 
         assert set(keys) == set()
 
@@ -43,7 +43,7 @@ class TestEnvVariableKeyBinarySource:
             'BUSTIME_PUBLICATION_KEY_FIRST': ssh_generated_public_key
         }
 
-        keys = util.EnvVariableKeyBinarySource(env_dict).get_key_binaries()
+        keys = config.EnvVariableKeyBinarySource(env_dict).get_key_binaries()
 
         assert len(keys) == 1
 
@@ -63,7 +63,7 @@ class TestDirectoryKeyBinarySource:
             self._write_file(dir_name, 'second.pub', b'second')
             self._write_file(dir_name, 'third.txt', b'third')
 
-            keys = util.DirectoryKeyBinarySource(dir_name).get_key_binaries()
+            keys = config.DirectoryKeyBinarySource(dir_name).get_key_binaries()
             assert set(keys) == { b'first', b'second' }
 
     def _write_file(self, dir_name, file_name, content):
@@ -74,5 +74,5 @@ class TestDirectoryKeyBinarySource:
 
     def test_invalid_dir_yields_empty_key_sequence(self):
         invalid_dir = '~/~'
-        keys = util.DirectoryKeyBinarySource(invalid_dir).get_key_binaries()
+        keys = config.DirectoryKeyBinarySource(invalid_dir).get_key_binaries()
         assert len(keys) == 0

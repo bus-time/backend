@@ -13,10 +13,10 @@ from cryptography.hazmat.primitives import serialization as crypto_serial
 from cryptography.hazmat.primitives.asymmetric import padding as crypto_padding
 from cryptography.hazmat.primitives.asymmetric import rsa as crypto_rsa
 
-from backend import db, util, service
+from backend import db, config, service
 
 
-class SqliteDbConfig(util.Config):
+class SqliteDbConfig(config.Config):
     SQLITE_DB_URL = 'sqlite:///{0}'
 
     def __init__(self):
@@ -40,7 +40,7 @@ class BaseDbAwareTest:
     MAX_VERSION = 5
 
     def init_database(self):
-        util.Config.init(SqliteDbConfig())
+        config.Config.init(SqliteDbConfig())
 
         with db.Session(init_schema=True) as session:
             for x in range(self.MIN_VERSION, self.MAX_VERSION + 1):
@@ -312,7 +312,7 @@ class TestApplyUpdate:
         return str(index).encode()
 
     def _init_database(self, databases):
-        util.Config.init(SqliteDbConfig())
+        config.Config.init(SqliteDbConfig())
 
         with db.Session(init_schema=True) as session:
             for database in databases:

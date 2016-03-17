@@ -5,7 +5,7 @@ from http import HTTPStatus
 import flask
 from flask.ext import compress
 
-from backend import util, web_util
+from backend import config, web_util
 
 
 def create_flask_app():
@@ -23,6 +23,6 @@ def create_flask_app():
 app = create_flask_app()
 compressor = compress.Compress(app)
 
-util.Config.init()
+config.Config.init()
 
 import backend.views
