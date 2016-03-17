@@ -13,8 +13,12 @@ from backend.server import app, web_util
 class DatabasesView(FlaskView):
     HEADER_CONTENT_TYPE = 'Content-Type'
     HEADER_CONTENT_DISPOSITION = 'Content-Disposition'
+    HEADER_WWW_AUTHENTICATE = 'WWW-Authenticate'
     HEADER_X_CONTENT_SHA256 = 'X-Content-SHA256'
     HEADER_X_CONTENT_SIGNATURE = 'X-Content-Signature'
+
+    VALUE_WWW_AUTHENTICATE = ('RSASSA-PKCS1-v1_5 body signature with SHA512; '
+                              'Base64 encoded; in X-Content-Signature header')
 
     CONTENT_TYPE_OCTET_STREAM = 'application/octet-stream'
     CONTENT_DISPOSITION_DB_FILE = 'attachment; filename=bus-time.db'
@@ -82,11 +86,19 @@ class DatabasesView(FlaskView):
             update_content = update.get_update_content(json_data, signature_text)
             update.apply_update(update_content)
         except service.InvalidSignatureError:
-            web_util.abort(HTTPStatus.UNAUTHORIZED
+            web_util.abort(
+                HTTPStatus.UNAUTHORIZED,
+                headers=self._build_extra_unauthorized_headers()
+            )
         except service.InvalidUpdateContentError:
             web_util.abort(HTTPStatus.BAD_REQUEST)
 
         return flask.jsonify(status='success')
+
+    def _build_extra_unauthorized_headers(self):
+        return {
+            self.HEADER_WWW_AUTHENTICATE: self.VALUE_WWW_AUTHENTICATE
+        }
 
 
 DatabasesView.register(app)
