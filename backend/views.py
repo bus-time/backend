@@ -7,7 +7,7 @@ import flask
 from flask.ext.classy import FlaskView, route
 
 from backend import service
-from backend.server import app
+from backend.server import app, web_util
 
 
 class DatabasesView(FlaskView):
@@ -29,7 +29,7 @@ class DatabasesView(FlaskView):
                 dict(schema_version=schema_version, version=version)
             )
         except service.NoDatabaseFound:
-            flask.abort(HTTPStatus.NOT_FOUND)
+            web_util.abort(HTTPStatus.NOT_FOUND)
 
     @route('/<int:schema_version>/content/')
     def content(self, schema_version):
@@ -37,7 +37,7 @@ class DatabasesView(FlaskView):
             content = service.DatabaseQuery().get_content(schema_version)
             return self._build_database_contents_response(content)
         except service.NoDatabaseFound:
-            flask.abort(HTTPStatus.NOT_FOUND)
+            web_util.abort(HTTPStatus.NOT_FOUND)
 
     @route('/<int:schema_version>/contents/')
     def contents(self, schema_version):
@@ -69,7 +69,7 @@ class DatabasesView(FlaskView):
     @route('/', methods=['POST'])
     def deploy(self):
         if flask.request.content_length > self.MAX_UPDATE_CONTENT_LENGTH:
-            flask.abort(HTTPStatus.BAD_REQUEST)
+            web_util.abort(HTTPStatus.BAD_REQUEST)
             return
 
         signature_text = flask.request.headers.get(
@@ -82,9 +82,9 @@ class DatabasesView(FlaskView):
             update_content = update.get_update_content(json_data, signature_text)
             update.apply_update(update_content)
         except service.InvalidSignatureError:
-            flask.abort(HTTPStatus.UNAUTHORIZED)
+            web_util.abort(HTTPStatus.UNAUTHORIZED
         except service.InvalidUpdateContentError:
-            flask.abort(HTTPStatus.BAD_REQUEST)
+            web_util.abort(HTTPStatus.BAD_REQUEST)
 
         return flask.jsonify(status='success')
 
