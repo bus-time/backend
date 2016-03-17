@@ -70,6 +70,9 @@ class SignatureVerifier:
     UTF8_ENCODING = 'utf-8'
 
     def verify(self, public_key_binaries, text_to_verify, signature):
+        if not signature:
+            return False
+
         binary_to_verify = text_to_verify.encode(self.UTF8_ENCODING)
 
         for public_key_binary in public_key_binaries:
