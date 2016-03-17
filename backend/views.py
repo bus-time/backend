@@ -76,15 +76,12 @@ class DatabasesView(FlaskView):
             web_util.abort(HTTPStatus.BAD_REQUEST)
             return
 
-        signature_text = flask.request.headers.get(
-            self.HEADER_X_CONTENT_SIGNATURE, None
-        )
-        json_data = flask.request.get_data(as_text=True)
-
         try:
-            update = service.DatabaseUpdate()
-            update_content = update.get_update_content(json_data, signature_text)
-            update.apply_update(update_content)
+            update_content = self._deploy()
+
+            response = flask.jsonify(version=update_content.version)
+            response.status_code = HTTPStatus.CREATED
+            return response
         except service.InvalidSignatureError:
             web_util.abort(
                 HTTPStatus.UNAUTHORIZED,
@@ -93,7 +90,17 @@ class DatabasesView(FlaskView):
         except service.InvalidUpdateContentError:
             web_util.abort(HTTPStatus.BAD_REQUEST)
 
-        return flask.jsonify(status='success')
+    def _deploy(self):
+        signature_text = flask.request.headers.get(
+            self.HEADER_X_CONTENT_SIGNATURE, None
+        )
+        json_data = flask.request.get_data(as_text=True)
+
+        update = service.DatabaseUpdate()
+        update_content = update.get_update_content(json_data, signature_text)
+        update.apply_update(update_content)
+
+        return update_content
 
     def _build_extra_unauthorized_headers(self):
         return {
