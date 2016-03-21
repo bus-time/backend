@@ -23,7 +23,7 @@ Content-Length: 82
 }
 ```
 
-## Database Contents
+## Database Content
 
 ### Request
 

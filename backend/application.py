@@ -21,3 +21,7 @@ def parse_args():
 
 def run_server(args):
     server.app.run(debug=args.debug, use_reloader=args.use_reloader)
+
+
+if __name__ == '__main__':
+    main()
