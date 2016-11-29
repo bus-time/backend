@@ -4,7 +4,7 @@
 from http import HTTPStatus
 
 import flask
-from flask.ext.classy import FlaskView, route
+from flask_classy import FlaskView, route
 
 from backend import service
 from backend.server import app, web_util

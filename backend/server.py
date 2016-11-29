@@ -2,7 +2,7 @@
 
 
 import flask
-from flask.ext import compress
+import flask_compress as compress
 
 from backend import config, web_util
 
