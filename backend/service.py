@@ -120,7 +120,7 @@ class DatabaseUpdateContentValidator(metaclass=abc.ABCMeta):
 
 class VersionValidator(DatabaseUpdateContentValidator):
     VERSION_LENGTH = 40
-    ALLOWED_CHARS = '0123456780abcdef'
+    ALLOWED_CHARS = '01234567890abcdef'
 
     def validate(self, update_content):
         version = update_content.version
@@ -130,7 +130,7 @@ class VersionValidator(DatabaseUpdateContentValidator):
 
         if len(version) != self.VERSION_LENGTH:
             raise InvalidUpdateContentError(
-                'Version is not 40 characters length'
+                'Version length is not 40 characters'
             )
 
         for char in version:

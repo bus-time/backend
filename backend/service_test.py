@@ -177,12 +177,21 @@ class TestDatabaseUpdateContent:
             ]
         ))
 
+    def test_all_valid_character_version_succeeds(self):
+        version = '0123456789abcdef0123456789abcdef01234567'
+        content_json = self._build_content(
+            version, 1, 'MQ=='
+        )
+        content = service.DatabaseUpdateContent(content_json)
+
+        assert content.version == version
+
     def test_empty_version_fails(self):
         content_json = self._build_content('', 1, 'MQ==')
 
         with pytest.raises(service.InvalidUpdateContentError) as ex_info:
             service.DatabaseUpdateContent(content_json)
-        assert 'Version is not 40 characters length' in str(ex_info)
+        assert 'Version length is not 40 characters' in str(ex_info)
 
     def test_invalid_character_version_fails(self):
         content_json = self._build_content(
