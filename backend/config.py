@@ -117,7 +117,8 @@ class FileConfig(Config):
 
     @property
     def key_binaries(self):
-        return DirectoryKeyBinarySource(self.PUBLIC_KEY_DIR).get_key_binaries()
+        public_key_dir_path = os.path.expanduser(self.PUBLIC_KEY_DIR)
+        return DirectoryKeyBinarySource(public_key_dir_path).get_key_binaries()
 
 
 class KeyBinarySource(metaclass=abc.ABCMeta):
