@@ -7,7 +7,7 @@ import configparser
 import os
 
 
-class Config(metaclass=abc.ABCMeta):
+class Config(abc.ABC):
     PLATFORM_VARIABLE_HEROKU = 'DYNO'
     PLATFORM_VARIABLE_OPENSHIFT = 'OPENSHIFT_APP_NAME'
 
@@ -121,7 +121,7 @@ class FileConfig(Config):
         return DirectoryKeyBinarySource(public_key_dir_path).get_key_binaries()
 
 
-class KeyBinarySource(metaclass=abc.ABCMeta):
+class KeyBinarySource(abc.ABC):
     @abc.abstractmethod
     def get_key_binaries(self):
         pass

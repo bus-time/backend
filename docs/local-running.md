@@ -1,6 +1,6 @@
 # Local Running
 
-You will need PostgreSQL 9.+, Python 3.3.+ and PIP installed.
+You will need PostgreSQL 9.+, Python 3.4+ and PIP installed.
 
 1. Create empty PostgreSQL database for the Backend.
 

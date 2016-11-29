@@ -112,7 +112,7 @@ class InvalidUpdateContentError(RuntimeError):
         self.message = message
 
 
-class DatabaseUpdateContentValidator(metaclass=abc.ABCMeta):
+class DatabaseUpdateContentValidator(abc.ABC):
     @abc.abstractmethod
     def validate(self, update_content):
         pass
