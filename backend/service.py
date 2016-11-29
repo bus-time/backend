@@ -231,17 +231,16 @@ class InvalidSignatureError(RuntimeError):
 
 class DatabaseUpdate:
     def get_update_content(self, update_content_json, signature_text):
-        signature = Base64.base64_str_to_binary(signature_text)
-        if not self._is_signature_valid(update_content_json, signature):
+        if not self._is_signature_valid(update_content_json, signature_text):
             raise InvalidSignatureError()
 
         return DatabaseUpdateContent(update_content_json)
 
-    def _is_signature_valid(self, update_content_json, signature):
+    def _is_signature_valid(self, update_content_json, signature_text):
         return SignatureVerifier().verify(
             config.Config.get().key_binaries,
             update_content_json,
-            Base64.base64_str_to_binary(signature)
+            Base64.base64_str_to_binary(signature_text)
         )
 
     def apply_update(self, update_content):
