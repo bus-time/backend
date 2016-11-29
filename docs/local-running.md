@@ -30,7 +30,7 @@ You will need PostgreSQL 9.+, Python 3.3.+ and PIP installed.
 5. Run server.
 
   ```
-  $ python backend/application.py
+  $ python application.py
   ```
 
 6. Optionally deploy latest Bus Time database.
