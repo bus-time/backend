@@ -19,19 +19,14 @@ Heroku account and Heroku Toolbelt set up to work with your account.
     ...
   ```
 
-3. Generate RSA key pair to use for database deployment signing:
+3. Generate RSA key pair to use for database deployment signing.
   ```
-  $ ssh-keygen \
-      -t rsa \
-      -b 4096 \
-      -C "your-email@example.com" \ 
-      -N "" \
-      -f /key/pair/path/bustime
+  $ ssh-keygen -t rsa -b 4096 -C "your-email@example.com" -N "" -f /key/pair/path/bustime
   ```
 
 4. Create Heroku config variable with the content of the public key
   `/key/pair/path/bustime.pub` so that the backend can find it when verifying 
-  a signature:
+  a signature.
   ```
   heroku config:set BUSTIME_PUBLICATION_KEY_<YOUR_NAME>="$(cat /key/pair/path/bustime.pub)"
   ```
