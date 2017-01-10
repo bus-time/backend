@@ -27,14 +27,9 @@ You will need PostgreSQL 9.+, Python 3.4+ and PIP installed.
   $ alembic --config config/alembic.ini upgrade head
   ```
   
-5. Generate RSA key pair to use for database deployment signing:
+5. Generate RSA key pair to use for database deployment signing.
   ```
-  $ ssh-keygen \
-  -t rsa \
-  -b 4096 \
-  -C "your-email@example.com" \ 
-  -N "" \
-  -f /key/pair/path/bustime
+  $ ssh-keygen -t rsa -b 4096 -C "your-email@example.com" -N "" -f /key/pair/path/bustime
   ```
   
 6. Move public key `/key/pair/path/bustime.pub` to `~/.ssh/` directory so that
