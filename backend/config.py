@@ -9,7 +9,6 @@ import os
 
 class Config(abc.ABC):
     PLATFORM_VARIABLE_HEROKU = 'DYNO'
-    PLATFORM_VARIABLE_OPENSHIFT = 'OPENSHIFT_APP_NAME'
 
     _config = None
 
@@ -35,18 +34,12 @@ class Config(abc.ABC):
     def _create(cls):
         if cls._is_heroku_hosted():
             return HerokuConfig()
-        elif cls._is_openshift_hosted():
-            return OpenShiftConfig()
         else:
             return FileConfig()
 
     @classmethod
     def _is_heroku_hosted(cls):
         return cls.PLATFORM_VARIABLE_HEROKU in os.environ
-
-    @classmethod
-    def _is_openshift_hosted(cls):
-        return cls.PLATFORM_VARIABLE_OPENSHIFT in os.environ
 
     def _get_script_dir(self):
         return os.path.dirname(os.path.realpath(__file__))
@@ -59,25 +52,6 @@ class HerokuConfig(Config):
     @property
     def db_url(self):
         return os.environ[self.ENV_DATABASE_URL]
-
-    @property
-    def key_binaries(self):
-        return EnvVariableKeyBinarySource(os.environ).get_key_binaries()
-
-
-class OpenShiftConfig(Config):
-    DATABASE_URL_TEMPLATE = 'postgresql://{}:{}'
-    ENV_DATABASE_HOST = 'OPENSHIFT_POSTGRESQL_DB_HOST'
-    ENV_DATABASE_PORT = 'OPENSHIFT_POSTGRESQL_DB_PORT'
-
-    KEY_DIR = '../config'
-
-    @property
-    def db_url(self):
-        return self.DATABASE_URL_TEMPLATE.format(
-            os.environ.get(self.ENV_DATABASE_HOST),
-            os.environ.get(self.ENV_DATABASE_PORT)
-        )
 
     @property
     def key_binaries(self):
