@@ -2,21 +2,26 @@
 
 
 import flask
-from flask.ext import compress
+import flask_compress as compress
+
+from backend import config, web_util
 
 
-app = flask.Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
+def create_flask_app():
+    flask_app = flask.Flask(__name__)
 
+    flask_app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024
+    flask_app.config['COMPRESS_MIMETYPES'] = ['application/json',
+                                              'application/octet-stream']
+
+    web_util.JsonHttpExceptionHandler().init(flask_app)
+
+    return flask_app
+
+
+app = create_flask_app()
 compressor = compress.Compress(app)
-app.config['COMPRESS_MIMETYPES'] = ['application/json',
-                                    'application/octet-stream']
 
+config.Config.init()
 
 import backend.views
-
-
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    from backend import db
-    db.database_session.remove()

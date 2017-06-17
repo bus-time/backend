@@ -3,6 +3,7 @@
 
 
 import argparse
+import json
 import subprocess
 
 
@@ -51,10 +52,17 @@ class Deployer(object):
         return ['heroku'] + args + ['--remote', self.remote]
 
     def have_running_dynos(self):
-        return self.heroku_check_output(['ps'])
+        running_dynos = json.loads(self.heroku_check_output(['ps', '--json']))
+
+        if not isinstance(running_dynos, list):
+            raise TypeError()
+
+        return len(running_dynos) > 0
 
     def heroku_check_output(self, args):
-        return subprocess.check_output(self.build_heroku_command(args)).strip()
+        return subprocess.check_output(
+            self.build_heroku_command(args), universal_newlines=True
+        ).strip()
 
     def deploy_application(self):
         subprocess.check_call(self.build_push_command())
