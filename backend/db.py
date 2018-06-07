@@ -2,8 +2,9 @@
 
 
 import sqlalchemy as sa
-from sqlalchemy.ext import declarative
+import threading
 from sqlalchemy import orm
+from sqlalchemy.ext import declarative
 
 from backend import config
 
@@ -14,13 +15,21 @@ class Session:
     _session_class = None
 
     def __init__(self, init_schema=False):
-        if not self._session_class:
-            self._session_class = orm.sessionmaker(bind=self._create_engine())
-
-        self._session = self._session_class()
+        session_class = self._get_session_class()
+        self._session = session_class()
 
         if init_schema:
             Base.metadata.create_all(self._session.get_bind())
+
+    def _get_session_class(self):
+        if not Session._session_class:
+            with threading.Lock():
+                if not Session._session_class:
+                    Session._session_class = orm.sessionmaker(
+                        bind=self._create_engine()
+                    )
+
+        return Session._session_class
 
     def _create_engine(self):
         return sa.create_engine(config.Config.get().db_url)

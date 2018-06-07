@@ -39,28 +39,32 @@ class BaseDbAwareTest:
     MIN_VERSION = 1
     MAX_VERSION = 5
 
-    def init_database(self):
-        config.Config.init(SqliteDbConfig())
+    def init_filled_database(self):
+        databases = [
+            db.Database(schema_version=x, version=str(x), content=bytes(x))
+            for x in range(self.MIN_VERSION, self.MAX_VERSION + 1)
+        ]
+        self.init_database(databases)
 
-        with db.Session(init_schema=True) as session:
-            for x in range(self.MIN_VERSION, self.MAX_VERSION + 1):
-                session.add(
-                    db.Database(
-                        schema_version=x,
-                        version=str(x),
-                        content=bytes(x)
-                    )
-                )
+    def init_database(self, databases):
+        is_new_database = not isinstance(config.Config.get(), SqliteDbConfig)
+        if is_new_database:
+            config.Config.init(SqliteDbConfig())
+
+        with db.Session(init_schema=is_new_database) as session:
+            session.query(db.Database).delete()
+            for x in databases:
+                session.add(x)
 
 
 class TestDatabaseQuery(BaseDbAwareTest):
     def test_get_existing_version_info_succeeds(self):
-        self.init_database()
+        self.init_filled_database()
         version = service.DatabaseQuery().get_version(self.MIN_VERSION)
         assert version == str(self.MIN_VERSION)
 
     def test_get_non_existing_version_info_fails(self):
-        self.init_database()
+        self.init_filled_database()
 
         with pytest.raises(service.NoDatabaseFound):
             service.DatabaseQuery().get_version(
@@ -68,12 +72,12 @@ class TestDatabaseQuery(BaseDbAwareTest):
             )
 
     def test_get_existing_content_succeeds(self):
-        self.init_database()
+        self.init_filled_database()
         content = service.DatabaseQuery().get_content(self.MIN_VERSION)
         assert content == bytes(self.MIN_VERSION)
 
     def test_get_non_existing_content_fails(self):
-        self.init_database()
+        self.init_filled_database()
 
         with pytest.raises(service.NoDatabaseFound):
             service.DatabaseQuery().get_content(self.MAX_VERSION + 1)
@@ -271,12 +275,12 @@ class TestDatabaseUpdateContent:
         assert 'Content is empty' in str(ex_info)
 
 
-class TestApplyUpdate:
+class TestApplyUpdate(BaseDbAwareTest):
     HASH_SIZE = 40
     ASCII_ENCODING = 'ascii'
 
     def test_empty_db_update_succeeds(self):
-        self._init_database([])
+        self.init_database([])
 
         content_dict = dict(
             version=self._make_version(1),
@@ -319,15 +323,6 @@ class TestApplyUpdate:
 
     def _make_content(self, index):
         return str(index).encode()
-
-    def _init_database(self, databases):
-        config.Config.init(SqliteDbConfig())
-
-        with db.Session(init_schema=True) as session:
-            for database in databases:
-                session.add(database)
-
-        session.commit()
 
     def _apply_update(self, content_dict):
         content_json = json.dumps(content_dict)
@@ -373,7 +368,7 @@ class TestApplyUpdate:
                 content=self._make_content(2)
             )
         ]
-        self._init_database(existing_databases)
+        self.init_database(existing_databases)
 
         content_dict = dict(
             version=self._make_version(3),
@@ -428,7 +423,7 @@ class TestApplyUpdate:
                 content=self._make_content(2)
             )
         ]
-        self._init_database(existing_databases)
+        self.init_database(existing_databases)
 
         content_dict = dict(
             version=self._make_version(3),
