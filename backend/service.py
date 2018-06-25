@@ -278,7 +278,7 @@ class DatabaseUpdate:
 
         if existing_database:
             existing_database.version = version
-            existing_database.contents = schema_version_content.content
+            existing_database.content = schema_version_content.content
         else:
             self._create_new_database(
                 session, schema_version_content, version

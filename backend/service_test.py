@@ -430,11 +430,11 @@ class TestApplyUpdate(BaseDbAwareTest):
             schema_versions=[
                 dict(
                     schema_version=2,
-                    content=self._make_base64_content(2)
+                    content=self._make_base64_content(4)
                 ),
                 dict(
                     schema_version=3,
-                    content=self._make_base64_content(3)
+                    content=self._make_base64_content(6)
                 ),
             ]
         )
@@ -449,12 +449,12 @@ class TestApplyUpdate(BaseDbAwareTest):
             db.Database(
                 version=self._make_version(3),
                 schema_version=2,
-                content=self._make_content(2)
+                content=self._make_content(4)
             ),
             db.Database(
                 version=self._make_version(3),
                 schema_version=3,
-                content=self._make_content(3)
+                content=self._make_content(6)
             )
         ]
 
